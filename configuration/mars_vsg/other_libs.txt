@@ -1,0 +1,17 @@
+# additional list of libraries to be loaded after the core libraries have been loaded
+connexion_plugin
+data_broker_gui
+cfg_manager_gui
+lib_manager_gui
+log_console
+#mars_skydome
+#neural_soil
+data_broker_plotter
+data_broker_graph_view
+#BagelMARS
+envire_entity_view
+#motor_replay
+#envire_mars_plugins
+#crex_reward_plugin
+#CameraGUI
+

@@ -1,0 +1,13 @@
+data_broker
+main_gui
+mars_gui
+#mars_graphics
+mars_vsg_graphicsd
+mars_core
+envire_mars_ode_physics
+envire_mars_ode_collision
+envire_mars_motors
+envire_mars_sensors
+envire_mars_graphics
+#entity_view
+mars_scene_loader
