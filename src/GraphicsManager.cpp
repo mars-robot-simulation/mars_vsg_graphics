@@ -168,9 +168,9 @@ namespace mars
                 vsg::visit<SetGlobalPipelineStates>(rootNode);
                 viewer->compile();
                 return nextDrawID-1;
-            } catch(...)
+            } catch(std::exception &e)
             {
-                fprintf(stderr, "inavlid DrawObject spec %s.\n", snode.name.c_str());
+                fprintf(stderr, "While adding DrawObject: %s: %s", snode.name.c_str(), e.what());
             }
             return 0;
         }
