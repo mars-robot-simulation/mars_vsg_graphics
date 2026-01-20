@@ -1,55 +1,55 @@
 #include "DrawObject.hpp"
+#include "shader/GraphShader.hpp"
 #include "gui_helper_functions.hpp"
-
-
-const auto skybox_vert = R"(
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(push_constant) uniform PushConstants {
-    mat4 projection;
-    mat4 modelView;
-} pc;
-
-layout(binding = 0) uniform mat4 ;
-layout(location = 0) in vec3 vsg_Vertex;
-layout(location = 0) out vec3 UVW;
-
-out gl_PerVertex{ vec4 gl_Position; };
-
-void main()
-{
-    UVW = vsg_Vertex;
-
-    // Remove translation
-    mat4 modelView = pc.modelView;
-    //rmodelView[3] = vec4(0.0, 0.0, 0.0, 1.0);
-
-    vec4 pos = pc.projection * modelView * vec4(vsg_Vertex, 1.0);
-    gl_Position = pos;
-    //UVW = pos.xyz;
-}
-)";
-
-const auto skybox_frag = R"(
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-//layout(binding = 0) uniform samplerCube envMap;
-layout(location = 0) in vec3 UVW;
-layout(location = 0) out vec4 outColor;
-
-void main()
-{
-    outColor = vec4(UVW.z, 0.0, 0.0, 1.0);
-}
-)";
-
+#include <mars_utils/misc.h>
 
 namespace mars
 {
     namespace vsg_graphics
     {
+
+        struct RemoveShader : public vsg::Visitor
+        {
+            void apply(vsg::Object& object) override
+                {
+                    //fprintf(stderr, "-------------- traverse %s\n", object.className());
+                    object.traverse(*this);
+                }
+
+            void apply(vsg::Group &v) override
+                {
+                    //fprintf(stderr, "-------------- traverse Group %p\n", &v);
+                    vsg::ref_ptr<vsg::Group> p(&v);
+
+                    // if(auto rs = p->cast<vsg::MatrixTransform>())
+                    // {
+                    //     fprintf(stderr, "------------------ Group is MatrisTransform %p\n", &v);
+                    // }
+
+                    v.traverse(*this);
+                    for(auto &c: children)
+                    {
+                        p->addChild(c);
+                    }
+                    for(auto &s: stateGroups)
+                    {
+                        p->children.erase(std::find(p->children.begin(), p->children.end(), s));
+                    }
+                    stateGroups.clear();
+                    children.clear();
+                }
+
+            void apply(vsg::StateGroup &v) override
+                {
+                    //fprintf(stderr, "-------------- traverse StateGroup %p\n", &v);
+                    children.push_back(v.children[0]);
+                    stateGroups.push_back(&v);
+                }
+
+            std::vector<vsg::ref_ptr<vsg::Node>> children;
+            std::vector<vsg::StateGroup*> stateGroups;
+
+        };
 
         DrawObject::DrawObject() : visible(true)
         {
@@ -61,77 +61,25 @@ namespace mars
 
         }
 
-        void DrawObject::createObject(configmaps::ConfigMap spec, vsg::ref_ptr<vsg::Group> parent, vsg::ref_ptr<WorldTransformUniformValue> worldTransformUniform)
+        void DrawObject::createObject(configmaps::ConfigMap spec, vsg::ref_ptr<vsg::Group> parent_)
         {
-            if(parent) setParent(parent);
-            vsg::GeometryInfo geomInfo;
-            vsg::StateInfo stateInfo;
+            if(parent_) setParent(parent_);
 
-            // todo: check how culling is done in vsg
-            //geomInfo.cullNode = settings.insertCullNode;
-            geomInfo.color.set(1.0f, 1.0f, 1.5f, 1.0f);
             //fprintf(stderr, "createObject spec:\n%s\n", spec.toYamlString().c_str());
 
+            // todo: prefix material names by worlds?
+            auto stateGroup = GuiHelper::createStateGroup(spec["material"]);
 
-            // for testing we try to load shaders from working dir
-            auto vertexShader = vsg::ShaderStage::create(VK_SHADER_STAGE_VERTEX_BIT, "main", skybox_vert);
-            auto fragmentShader = vsg::ShaderStage::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", skybox_frag);
-            if (!vertexShader || !fragmentShader)
-            {
-                std::cout << "Could not create shaders." << std::endl;
-            }
-            const vsg::ShaderStages shaders{vertexShader, fragmentShader};
-
-            vsg::DescriptorSetLayoutBindings descriptorBindings{
-                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr},            // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers}
-                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
-            };
-            auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
-
-            auto worldTransformUniformDescriptor = vsg::DescriptorBuffer::create(worldTransformUniform, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-            auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{worldTransformUniformDescriptor});
-
-            vsg::PushConstantRanges pushConstantRanges{
-                {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection, view, and model matrices, actual push constant calls automatically provided by the VSG's RecordTraversal
-            };
-
-            vsg::VertexInputState::Bindings vertexBindingsDescriptions{
-                VkVertexInputBindingDescription{0, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}};
-
-            vsg::VertexInputState::Attributes vertexAttributeDescriptions{
-                VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}};
-
-            auto rasterState = vsg::RasterizationState::create();
-            rasterState->cullMode = VK_CULL_MODE_FRONT_BIT;
-
-            auto depthState = vsg::DepthStencilState::create();
-            depthState->depthTestEnable = VK_TRUE;
-            depthState->depthWriteEnable = VK_FALSE;
-            depthState->depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-
-            vsg::GraphicsPipelineStates pipelineStates{
-                vsg::VertexInputState::create(vertexBindingsDescriptions, vertexAttributeDescriptions),
-                vsg::InputAssemblyState::create(),
-                rasterState,
-                vsg::MultisampleState::create(),
-                vsg::ColorBlendState::create(),
-                depthState};
-
-            auto pipelineLayout = vsg::PipelineLayout::create(vsg::DescriptorSetLayouts{descriptorSetLayout}, pushConstantRanges);
-            auto pipeline = vsg::GraphicsPipeline::create(pipelineLayout, shaders, pipelineStates);
-            auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, vsg::DescriptorSets{descriptorSet});
-            auto bindGraphicsPipeline = vsg::BindGraphicsPipeline::create(pipeline);
-
-            auto root = vsg::StateGroup::create();
-            root->add(bindGraphicsPipeline);
-            root->add(bindDescriptorSets);
-
-            //root->add(bindDescriptorSet); // descriptor set is used for textures and uniforms etc
-            
             if(spec.hasKey("filename"))
             {
                 if(spec["filename"] == "PRIMITIVE")
                 {
+                    vsg::GeometryInfo geomInfo;
+                    vsg::StateInfo stateInfo;
+                    // todo: check how culling is done in vsg
+                    //geomInfo.cullNode = settings.insertCullNode;
+                    geomInfo.color.set(1.0f, 1.0f, 1.5f, 1.0f);
+
                     // todo: use options from GuiHelper
                     auto options = vsg::Options::create();
                     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
@@ -160,48 +108,73 @@ namespace mars
                         geomInfo.dz.set(0, 0, d);
                         drawObject = builder->createSphere(geomInfo, stateInfo);
                     }
-                    // if(drawObject.cast<vsg::StateGroup>())
-                    // {
-                    //     LOG_ERROR("have stateGroup");
-                    //     root->addChild(drawObject.cast<vsg::StateGroup>()->children[0]);
-                    // }
-                    // else if(drawObject.cast<vsg::CullNode>())
-                    // {
-                    //     LOG_ERROR("have cullNode");
-                    //     root->addChild(drawObject.cast<vsg::CullNode>()->child);
-                    // }
-                    // else
-                    // {
-                    //     LOG_ERROR("have no stateGroup nor cullNode");
-                    //     root->addChild(drawObject);
-                    // }
-                    // drawObject = root;
                 }
                 else
                 {
-                    drawObject = GuiHelper::readNodeFromFile((std::string)(spec["filename"]));
+                    std::string filename = spec["filename"];
+                    if(GuiHelper::checkBobj(filename))
+                    {
+                        drawObject = GuiHelper::readBobjFromFile(filename);
+                    } else
+                    {
+                        drawObject = GuiHelper::readNodeFromFile(filename);
+                        // we have to remove the render pipeline which was created by the loader
+                        vsg::visit<RemoveShader>(drawObject);
+                    }
+/*
                     vsg::ref_ptr<vsg::PbrMaterialValue> materialValue(extractMaterialValue(drawObject));
                     auto material = (vsg::PbrMaterial*)(materialValue->dataPointer(0));
-                    // material->diffuseFactor = vsg::vec4{0.9,0.9,1.0,1.0};
+material->diffuseFactor = vsg::vec4{0.0,0.9,1.0,1.0};
+*/
                     // material->defines.insert("VSG_TWO_SIDED_LIGHTING");
-                    vsg::ref_ptr<vsg::DescriptorConfigurator> materialConfig = vsg::DescriptorConfigurator::create();
-                    materialConfig->defines.insert("VSG_TWO_SIDED_LIGHTING");
+                    //vsg::ref_ptr<vsg::DescriptorConfigurator> materialConfig = vsg::DescriptorConfigurator::create();
+                    //materialConfig->defines.insert("VSG_TWO_SIDED_LIGHTING");
                     //materialConfig->assignDescriptor("material", materialValue);
                 }
                 if(drawObject)
                 {
+
+                    // apply own shader pipeline
+                    // if(drawObject.cast<vsg::StateGroup>())
+                    // {
+                    //     //LOG_ERROR("have stateGroup");
+                    //     stateGroup->addChild(drawObject.cast<vsg::StateGroup>()->children[0]);
+                    // }
+                    // else if(drawObject.cast<vsg::CullNode>())
+                    // {
+                    //     //LOG_ERROR("have cullNode");
+                    //     stateGroup->addChild(drawObject);
+                    // }
+                    // else
+                    // {
+                    //     //LOG_ERROR("have no stateGroup nor cullNode");
+                    //     stateGroup->addChild(drawObject);
+                    // }
+                    // drawObject = stateGroup;
+
+                    materialStateGroup = stateGroup;
+
+                    // if(parent)
+                    // {
+                    //     parent->addChild(poseTransform);
+                    // }
+
+                    // vs. have the stategroup only once in the graph and have the drawobjects as children of the stategroup
                     poseTransform->addChild(drawObject);
-                    if(parent)
-                    {
-                        parent->addChild(poseTransform);
-                    }
+                    stateGroup->addChild(poseTransform);
+                    // todo: how to deal with parents?
+                    // if(parent)
+                    // {
+                    //     parent->addChild(poseTransform);
+                    // }
+                    //vsg::write(root, "debug.vsgt");
                 }
             }
         }
 
-        void DrawObject::setParent(vsg::ref_ptr<vsg::Group> parent)
+        void DrawObject::setParent(vsg::ref_ptr<vsg::Group> parent_)
         {
-            this->parent = parent;
+            this->parent = parent_;
         }
 
         void DrawObject::setPosition(const utils::Vector &pos)
@@ -232,16 +205,27 @@ namespace mars
             if(v != visible)
             {
                 visible = v;
-                if(drawObject && parent)
+                if(drawObject)
                 {
+                    // if(!visible)
+                    // {
+                    //     auto it = std::find(parent->children.begin(), parent->children.end(), poseTransform);
+                    //     parent->children.erase(it);
+                    // }
+                    // else
+                    // {
+                    //     parent->addChild(poseTransform);
+                    // }
                     if(!visible)
                     {
-                        auto it = std::find(parent->children.begin(), parent->children.end(), poseTransform);
-                        parent->children.erase(it);
+                        auto it = std::find(materialStateGroup->children.begin(),
+                                            materialStateGroup->children.end(),
+                                            poseTransform);
+                        materialStateGroup->children.erase(it);
                     }
                     else
                     {
-                        parent->addChild(poseTransform);
+                        materialStateGroup->addChild(poseTransform);
                     }
                 }
             }

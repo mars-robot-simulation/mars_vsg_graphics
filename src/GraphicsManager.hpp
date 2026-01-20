@@ -230,6 +230,7 @@ namespace mars
 
         private:
             interfaces::GraphicData graphicOptions;
+            //vsg::ref_ptr<vsg::Viewer> viewer;
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsgQt::Window *window;
             QWidget *container;
@@ -238,7 +239,9 @@ namespace mars
             unsigned long long nextDrawID;
             std::map<unsigned long long, DrawObject*> drawObjects;
             GuiHelper *guiHelper;
-            vsg::ref_ptr<WorldTransformUniformValue> worldTransformUniform;
+            vsg::ref_ptr<vsg::LookAt> lookAt;
+            vsg::ref_ptr<vsg::ProjectionMatrix> perspective;
+            bool dirty;
 
             // mars event handling
             std::list<interfaces::GraphicsUpdateInterface*> graphicsUpdateObjects;

@@ -68,17 +68,29 @@ if(OSGQT_FOUND)
 endif()
 pkg_check_modules(Dependencies REQUIRED IMPORTED_TARGET ${DEPENDENCIES})
 
+add_definitions(-DMARS_VSG_GRAPHICS_DEFAULT_RESOURCES_PATH=\"${CMAKE_INSTALL_PREFIX}/share/mars_vsg_graphics\")
+
 set(HEADERS
            src/GraphicsManager.hpp
            src/DrawObject.hpp
+           src/shader/GraphShader.hpp
+           src/shader/ShaderTypes.hpp
            src/gui_helper_functions.hpp
+           src/MARSStateGroup.hpp
+           src/Bobj.hpp
+           src/tsort/tsort.h
 )
 
 
 set(SOURCES
            src/GraphicsManager.cpp
            src/DrawObject.cpp
+           src/shader/GraphShader.cpp
+           src/shader/ShaderTypes.cpp
            src/gui_helper_functions.cpp
+           src/MARSStateGroup.cpp
+           src/Bobj.cpp
+           src/tsort/tsort.cpp
 )
 
 if (${USE_QT5})

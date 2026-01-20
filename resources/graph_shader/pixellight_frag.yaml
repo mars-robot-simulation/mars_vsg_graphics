@@ -1,0 +1,58 @@
+params:
+  in:
+    baseColor: {index: 0, type: vec4}
+    normal: {index: 1, type: vec3}
+    shadow: {index: 2, type: float}
+  out:
+    shadedColor: {index: 3, type: vec4}
+source: graph_shader/plight.frag
+minVersion: 120
+varyings:
+  vec3:
+    - {name: eyeVec}
+    - {name: normalVarying}
+  vec3[]:
+    - {name: lightVec, arraySize: numLights}
+    - {name: spotDir, arraySize: numLights}
+  vec4:
+    - {name: positionVarying}
+    - {name: modelVertex}
+  vec4[]:
+    - {name: diffuse, arraySize: numLights}
+    - {name: specular, arraySize: numLights}
+uniforms:
+  vec3:
+    - {name: lineLaserPos}
+    - {name: lineLaserNormal}
+    - {name: lineLaserDirection}
+  vec3[]:
+    - {name: lightEmission, arraySize: numLights}
+  vec4:
+    - {name: lineLaserColor}
+  vec4[]:
+    - {name: lightAmbient, arraySize: numLights}
+  int:
+    - {name: numLights}
+    - {name: useFog}
+    - {name: useNoise}
+    - {name: drawLineLaser}
+  int[]:
+    - {name: lightIsSpot, arraySize: numLights}
+    - {name: lightIsSet, arraySize: numLights}
+    - {name: lightIsDirectional, arraySize: numLights}
+  float:
+    - {name: brightness}
+    - {name: noiseAmmount}
+    - {name: alpha}
+    - {name: lineLaserOpeningAngle}
+  float[]:
+    - {name: lightCosCutoff, arraySize: numLights}
+    - {name: lightSpotExponent, arraySize: numLights}
+    - {name: lightConstantAtt, arraySize: numLights}
+    - {name: lightLinearAtt, arraySize: numLights}
+    - {name: lightQuadraticAtt, arraySize: numLights}
+  mat4:
+    - {name: osg_ViewMatrixInverse}
+    - {name: osg_ViewMatrix}
+  sampler2D:
+    - {name: NoiseMap}

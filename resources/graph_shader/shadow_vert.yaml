@@ -1,0 +1,5 @@
+params:
+  in:
+    viewPos: {index: 0, type: vec4}
+source: graph_shader/shadow.vert
+#source: abstract

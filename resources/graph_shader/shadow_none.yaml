@@ -1,0 +1,5 @@
+params:
+  out:
+    shadow: {index: 0, type: float}
+source: graph_shader/shadow.frag
+minVersion: 120

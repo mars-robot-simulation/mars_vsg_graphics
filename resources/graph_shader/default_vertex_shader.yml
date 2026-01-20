@@ -1,0 +1,161 @@
+domain: ""
+name: default_vertex_shader
+type: vertex
+versions:
+  - name: v0.1
+    shaderData:
+      data: "gui:\n  layouts:\n    vertex_layout:\n      shader::math_vec41:\n        x: -48\n        y: 949\n      shader::normalize_vec31:\n        x: 902\n        y: 660\n      shader::decompose_vec42:\n        x: 174\n        y: 868\n      vertexOut:\n        y: 623\n        x: 1479\n      worldPos:\n        x: 1745\n        y: 515\n      viewPos:\n        y: 328\n        x: 1172\n      shader::sample2D1:\n        y: 925\n        x: 1809\n      shader::compose_vec21:\n        x: 1259\n        y: 1125\n      shader::compose_vec31:\n        y: 776\n        x: 649\n      texScale:\n        x: 1362\n        y: 909\n      view:\n        x: -3053.82\n        y: -1006.24\n        scale: 2.54584\n      normalMap:\n        y: 779\n        x: 1550\n      shader::terrain_map1:\n        y: 418\n        x: 854\n      shader::math_vec21:\n        x: 1538\n        y: 1021\n      shader::decompose_vec41:\n        x: 687\n        y: 1167\n      pixellight:\n        x: 2337\n        y: 268\n      normalmap_vert1:\n        y: 758\n        x: 1166\n    frag_layout:\n      vertexOut:\n        x: 1821\n        y: 287\n      worldPos:\n        x: 1851\n        y: 554\n      pixellight:\n        x: 2037\n        y: 511\n      viewPos2:\n        x: 1609\n        y: 458\n      gl_Vertex:\n        x: 1382\n        y: 393\n      vertexInfo1:\n        x: 1575\n        y: 191\n      shadow_vert1:\n        x: 1897\n        y: 390\n      view:\n        scale: 2.10719\n        x: -3823.05\n        y: -471.73\n  defaultLayout: frag_layout\n"
+    maturity: INPROGRESS
+    date: 2022-04-01T12:54:26
+    components:
+      nodes:
+        - name: vertexOut
+          alias: ""
+          model:
+            name: vertexOut
+            domain: SHADER
+            version: v1
+        - name: worldPos
+          alias: ""
+          model:
+            name: worldPos
+            domain: SHADER
+            version: v1
+        - name: pixellight
+          alias: ""
+          model:
+            name: pixellight_vert
+            domain: SHADER
+            version: v1
+        - name: viewPos2
+          alias: ""
+          model:
+            name: viewPos
+            domain: SHADER
+            version: v1
+        - name: gl_Vertex
+          alias: ""
+          model:
+            name: vec4
+            domain: SHADER
+            version: v1
+        - name: vertexInfo1
+          alias: ""
+          model:
+            name: vertexInfo
+            domain: SHADER
+            version: v1
+        - name: shadow_vert1
+          alias: ""
+          model:
+            name: shadow_vert
+            domain: SHADER
+            version: v1
+      configuration:
+        nodes:
+          - name: vertexOut
+            domain: SHADER
+            data: "data:\n  inputs:\n    normalVarying: vec3(0, 0, 1)\n"
+          - name: pixellight
+            domain: SHADER
+            data: "data:\n  inputs:\n    worldPos: vec4(0,0,0,0)\n    specularColor: vec4(0,0,0,0)\n"
+          - name: gl_Vertex
+            domain: SHADER
+            data: "data:\n  type: attribute\n"
+        edges:
+          []
+      edges:
+        - from:
+            name: worldPos
+            interface: worldPos
+            domain: SOFTWARE
+          to:
+            name: pixellight
+            interface: worldPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 1
+          data: "name: 1\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\n"
+        - from:
+            name: viewPos2
+            interface: viewPos
+            domain: SOFTWARE
+          to:
+            name: worldPos
+            interface: viewPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 27
+          data: "name: 27\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+        - from:
+            name: viewPos2
+            interface: viewPos
+            domain: SOFTWARE
+          to:
+            name: pixellight
+            interface: viewPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 28
+          data: "name: 28\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+        - from:
+            name: viewPos2
+            interface: viewPos
+            domain: SOFTWARE
+          to:
+            name: vertexOut
+            interface: viewPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 25
+          data: "name: 25\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+        - from:
+            name: gl_Vertex
+            interface: output
+            domain: SOFTWARE
+          to:
+            name: viewPos2
+            interface: modelPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 23
+          data: "name: 23\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+        - from:
+            name: gl_Vertex
+            interface: output
+            domain: SOFTWARE
+          to:
+            name: vertexOut
+            interface: modelPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 24
+          data: "name: 24\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+        - from:
+            name: vertexInfo1
+            interface: normal
+            domain: SOFTWARE
+          to:
+            name: vertexOut
+            interface: normalVarying
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 18
+          data: "name: 18\ndataType: vec3\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+        - from:
+            name: viewPos2
+            interface: viewPos
+            domain: SOFTWARE
+          to:
+            name: shadow_vert1
+            interface: viewPos
+            domain: SOFTWARE
+          weight: 1.000000
+          name: 8
+          data: "name: 8\ndataType: vec4\ndomain: SOFTWARE\nsmooth: true\nweight: 1.000000\ndecouple: false\nignore_for_sort: 0\n"
+    interfaces:
+      []
+    Data:
+      data: "gui:\n  layouts:\n    vertex_layout:\n      shader::math_vec41:\n        x: -48\n        y: 949\n      shader::normalize_vec31:\n        x: 902\n        y: 660\n      shader::decompose_vec42:\n        x: 174\n        y: 868\n      vertexOut:\n        y: 623\n        x: 1479\n      worldPos:\n        x: 1745\n        y: 515\n      viewPos:\n        y: 328\n        x: 1172\n      shader::sample2D1:\n        y: 925\n        x: 1809\n      shader::compose_vec21:\n        x: 1259\n        y: 1125\n      shader::compose_vec31:\n        y: 776\n        x: 649\n      texScale:\n        x: 1362\n        y: 909\n      view:\n        x: -3053.82\n        y: -1006.24\n        scale: 2.54584\n      normalMap:\n        y: 779\n        x: 1550\n      shader::terrain_map1:\n        y: 418\n        x: 854\n      shader::math_vec21:\n        x: 1538\n        y: 1021\n      shader::decompose_vec41:\n        x: 687\n        y: 1167\n      pixellight:\n        x: 2337\n        y: 268\n      normalmap_vert1:\n        y: 758\n        x: 1166\n    frag_layout:\n      vertexOut:\n        x: 1821.000000\n        y: 287.000000\n      worldPos:\n        x: 1851.000000\n        y: 554.000000\n      pixellight:\n        x: 2037.000000\n        y: 511.000000\n      viewPos2:\n        x: 1609.000000\n        y: 458.000000\n      gl_Vertex:\n        x: 1382.000000\n        y: 393.000000\n      vertexInfo1:\n        x: 1575.000000\n        y: 191.000000\n      shadow_vert1:\n        x: 1897.000000\n        y: 390.000000\n      view:\n        scale: 2.107190\n        x: -3752.683594\n        y: -681.931351\n  defaultLayout: frag_layout\n"
+types:
+  []

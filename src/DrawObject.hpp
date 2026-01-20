@@ -18,7 +18,7 @@ namespace mars
          public:
             DrawObject();
             ~DrawObject();
-            void createObject(configmaps::ConfigMap spec, vsg::ref_ptr<vsg::Group> parent=nullptr, vsg::ref_ptr<WorldTransformUniformValue> worldTransformUniform=nullptr);
+            void createObject(configmaps::ConfigMap spec, vsg::ref_ptr<vsg::Group> parent_=nullptr);
             void setParent(vsg::ref_ptr<vsg::Group> parent);
             void setPosition(const utils::Vector &pos);
             void setQuaternion(const utils::Quaternion &q);
@@ -33,6 +33,7 @@ namespace mars
             vsg::ref_ptr<vsg::MatrixTransform> scaleTransform;
             vsg::ref_ptr<vsg::Node> drawObject;
             vsg::ref_ptr<vsg::Group> parent;
+            vsg::ref_ptr<vsg::StateGroup> materialStateGroup;
             utils::Vector position;
             utils::Quaternion quaternion;
             bool visible;

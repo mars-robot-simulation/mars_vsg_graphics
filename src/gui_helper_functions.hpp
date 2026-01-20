@@ -1,4 +1,5 @@
 #pragma once
+#include "shader/GraphShader.hpp"
 #include <vsg/all.h>
 #include <vsgXchange/all.h>
 
@@ -13,8 +14,8 @@ namespace mars
 
         struct WorldTransformUniform
         {
-            vsg::mat4 viewInverse;
             vsg::mat4 projInverse;
+            vsg::mat4 viewInverse;
         };
         using WorldTransformUniformValue = vsg::Value<WorldTransformUniform>;
 
@@ -99,6 +100,7 @@ namespace mars
         {
         public:
             GuiHelper(interfaces::GraphicsManagerInterface *gi);
+            ~GuiHelper();
 
             /** \brief converts the mesh of an osgNode to the snmesh struct */
             static mars::interfaces::snmesh convertOsgNodeToSnMesh(vsg::Node *node, 
@@ -113,17 +115,28 @@ namespace mars
             virtual void getPhysicsFromMesh(mars::interfaces::NodeData *node);
             virtual void readPixelData(mars::interfaces::terrainStruct *terrain);
 
+            static GraphShader& readGraphShaderFromFile(std::string fileName);
             static vsg::ref_ptr<vsg::Node> readNodeFromFile(std::string fileName);
             static vsg::ref_ptr<vsg::Node> readBobjFromFile(const std::string &filename);
             static vsg::ref_ptr<vsg::Data> loadTexture(std::string filename);
             static vsg::ref_ptr<vsg::DescriptorImage> loadImage(std::string filename);
+            static std::string resourcePath;
+            static bool checkBobj(std::string &filename);
+            static vsg::ref_ptr<vsg::StateGroup> createStateGroup(configmaps::ConfigMap material);
+
+            static vsg::ref_ptr<WorldTransformUniformValue> worldTransformUniform;
+            static vsg::ref_ptr<vsg::Group> stateGroupNodes;
 
         private:
             interfaces::GraphicsManagerInterface *gi;
             static vsg::ref_ptr<vsg::Options> loadOptions;
 
-            // // vector to prevent double load of mesh files
-            // static std::vector<nodeFileStruct> nodeFiles;
+            // map to prevent double load of shader files
+            static std::map<std::string, GraphShader> graphShaderFiles;
+            static std::map<std::string, vsg::ref_ptr<vsg::StateGroup>> stateGroups;
+
+            // map to prevent double load of mesh files
+            static std::map<std::string, vsg::ref_ptr<vsg::Node>> nodeFiles;
             // // vector to prevent double load of textures
             // static std::vector<textureFileStruct> textureFiles;
             // // vector to prevent double load of images
