@@ -4,7 +4,7 @@
 #include <vsgXchange/all.h>
 
 #include <mars_interfaces/sim/LoadCenter.h>
-#include <mars_interfaces/graphics/GraphicsManagerInterface.h>
+#include <mars_interfaces/graphics/GraphicsManagerInterface.hpp>
 #include <mars_interfaces/Logging.hpp>
 
 namespace mars
@@ -128,7 +128,7 @@ namespace mars
             static vsg::ref_ptr<vsg::Group> stateGroupNodes;
 
         private:
-            interfaces::GraphicsManagerInterface *gi;
+            interfaces::GraphicsManagerInterface *graphicsInterface;
             static vsg::ref_ptr<vsg::Options> loadOptions;
 
             // map to prevent double load of shader files

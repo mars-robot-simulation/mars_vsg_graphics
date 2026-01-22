@@ -2,6 +2,7 @@
 #include "tsort/tsort.h"
 #include "../gui_helper_functions.hpp"
 #include <mars_utils/misc.h>
+#include <queue>
 
 using namespace std;
 using namespace configmaps;

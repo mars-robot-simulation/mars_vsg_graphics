@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ostream>
+#include <vector>
 
 namespace mars
 {
@@ -41,7 +42,7 @@ namespace mars
         {
             std::string name;
             std::vector<std::string> arguments;
-            FunctionCall(std::string name, std::vector<std::string> args, int prio, int s_prio) : name(name), arguments(args)
+            FunctionCall(std::string n, std::vector<std::string> args, int prio, int s_prio) : name(n), arguments(args)
                 {
                     (void)s_prio;
                     priority = prio;

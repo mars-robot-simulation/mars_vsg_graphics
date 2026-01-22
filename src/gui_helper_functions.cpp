@@ -71,9 +71,9 @@ namespace mars
             return vsg::vec4(v.x(), v.y(), v.z(), w);
         }
 
-        GuiHelper::GuiHelper(interfaces::GraphicsManagerInterface *gi) : gi(gi)
+        GuiHelper::GuiHelper(interfaces::GraphicsManagerInterface *gi) : graphicsInterface(gi)
         {
-            (void)this->gi;
+            (void)this->graphicsInterface;
         }
 
         GuiHelper::~GuiHelper()
