@@ -251,8 +251,9 @@ namespace mars
                 // replace if that file exists
                 if (pathExists(tmpfilename))
                 {
-                    //fprintf(stderr, "Loading .bobj instead of %s for file: %s\n", suffix.c_str(), tmpfilename.c_str());
+                    //LOG_ERROR("Loading .bobj instead of %s for file: %s\n", suffix.c_str(), tmpfilename.c_str());
                     filename = tmpfilename;
+                    return true;
                 }
                 else
                 {
@@ -283,7 +284,7 @@ namespace mars
                     }
                     if (pathExists(tmpfilename))
                     {
-                        //fprintf(stderr, "Loading .bobj instead of %s for file: %s\n", suffix.c_str(), tmpfilename.c_str());
+                        //LOG_ERROR("Loading .bobj instead of %s for file: %s\n", suffix.c_str(), tmpfilename.c_str());
                         filename = tmpfilename;
                         return true;
                     }
