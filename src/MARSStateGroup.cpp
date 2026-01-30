@@ -91,7 +91,7 @@ namespace mars
                 depthState};
 
             auto viewDescriptorSetLayout = vsg::ViewDescriptorSetLayout::create();
-            auto pipelineLayout = vsg::PipelineLayout::create(vsg::DescriptorSetLayouts{viewDescriptorSetLayout, descriptorSetLayout}, pushConstantRanges);
+            auto pipelineLayout = vsg::PipelineLayout::create(vsg::DescriptorSetLayouts{descriptorSetLayout, viewDescriptorSetLayout}, pushConstantRanges);
             auto pipeline = vsg::GraphicsPipeline::create(pipelineLayout, shaders, pipelineStates);
             auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, vsg::DescriptorSets{descriptorSet});
             auto bindGraphicsPipeline = vsg::BindGraphicsPipeline::create(pipeline);
