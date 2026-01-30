@@ -108,6 +108,12 @@ namespace mars
                         geomInfo.dz.set(0, 0, d);
                         drawObject = builder->createSphere(geomInfo, stateInfo);
                     }
+                    if(drawObject.cast<vsg::StateGroup>())
+                    {
+                        //LOG_ERROR("have stateGroup");
+                        drawObject = drawObject.cast<vsg::StateGroup>()->children[0];
+                    }
+		    //vsg::visit<RemoveShader>(drawObject);
                 }
                 else
                 {
