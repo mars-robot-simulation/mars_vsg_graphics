@@ -1,7 +1,7 @@
+cmake_minimum_required(VERSION 3.10)
 project(mars_vsg_graphics)
 set(PROJECT_VERSION 1.0)
 set(PROJECT_DESCRIPTION "This library provides a 3d visualization through simple interfaces.")
-cmake_minimum_required(VERSION 2.6)
 
 include(FindPkgConfig)
 include(CheckIncludeFileCXX)
@@ -106,8 +106,7 @@ include_directories("${CMAKE_BINARY_DIR}")
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${QT_MOC_HEADER_SRC} config.h)
 
 if (${USE_QT5})
-qt5_use_modules(${PROJECT_NAME} Widgets OpenGL)
-#qt5_use_modules(${PROJECT_NAME} MacExtras)
+set(QT5_TARGETS Qt5::Widgets Qt5::OpenGL)
 endif (${USE_QT5})
 
 if(APPLE)
@@ -123,6 +122,8 @@ if(WIN32)
   endif(USE_VERTEX_BUFFER)
 endif(WIN32)
 
+set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")
+
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         PkgConfig::Dependencies
@@ -133,6 +134,7 @@ target_link_libraries(${PROJECT_NAME}
         vsg::vsg
         vsgXchange::vsgXchange
         vsgQt::vsgQt
+        ${QT5_TARGETS}
 )
 
 if(WIN32)
