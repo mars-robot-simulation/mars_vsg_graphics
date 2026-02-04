@@ -6,6 +6,7 @@
 #include <vsgXchange/all.h>
 #include <mars_utils/misc.h>
 
+
 namespace mars
 {
     using namespace utils;
@@ -16,10 +17,11 @@ namespace mars
 
         GraphicsManager::GraphicsManager(lib_manager::LibManager *theManager,
                                          void *QTWidget)
-            : GraphicsManagerInterface(theManager), window(nullptr), container(nullptr), guiHelper{new GuiHelper{this}}
+            : GraphicsManagerInterface(theManager), guiHelper{new GuiHelper{this}}
         {
             (void)QTWidget;
             dirty = true;
+            vsg::Logger::instance()->level = vsg::Logger::LOGGER_INFO;
         }
 
         GraphicsManager::~GraphicsManager()
@@ -32,9 +34,10 @@ namespace mars
             {
                 delete it.second;
             }
-            if(window)
+
+            for(auto &iter: windows)
             {
-                delete window;
+                delete iter.second;
             }
             delete guiHelper;
         }
@@ -53,13 +56,13 @@ namespace mars
                 setupCFG();
 
                 nextDrawID = 1;
+                nextWindowID = 1;
 
-                auto traits = vsg::WindowTraits::create();
+                // todo: understand vsg options e. g. sharedObject and cache
                 // auto options = vsg::Options::create();
                 // options->sharedObjects = vsg::SharedObjects::create();
                 // options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
                 // options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
-                traits->windowTitle = "mars view";
 
                 rootNode = vsg::Group::create();
 
@@ -82,77 +85,40 @@ namespace mars
                 rootNode->addChild(directionalLight);
 
 
+                // todo: create version without qt
                 viewer = vsgQt::Viewer::create();
-                window = new vsgQt::Window(viewer, traits, (QWindow*)nullptr);
-                window->setTitle("3D Window");
-                window->initializeWindow();
 
-                //auto window = vsg::Window::create(traits);
-                if (!window)
-                {
-                    std::cout << "Could not create window." << std::endl;
-                    return;
-                }
-
-                // if this is the first window to be created, use its device for future window creation.
-                if (!traits->device) traits->device = window->windowAdapter->getOrCreateDevice();
-
-                uint32_t width = window->traits->width;
-                uint32_t height = window->traits->height;
-                fprintf(stderr, "-------- with: %u\theight: %u\n", width, height);
-
-                //viewer->addWindow(window);
-                double radius = 1.0;
-                lookAt = vsg::LookAt::create(vsg::dvec3(radius * 2.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
-                perspective = vsg::Perspective::create(30.0, static_cast<double>(width) / static_cast<double>(height), 0.001 * radius, radius * 100.5);
-                auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(VkExtent2D{width, height}));
-            
-                auto trackball = vsg::Trackball::create(camera);
-                trackball->addWindow(*window);
-                viewer->addEventHandler(trackball);
-
-                auto clearColor = vsg::vec4(0.2f, 0.2f, 0.7f, 1.0f);
 
                 // todo: we have to search for a clean way to provide this uniform;
                 //       we may have to inherit from the camera and update the uniform
                 //       in the camera update method
-                GuiHelper::worldTransformUniform = WorldTransformUniformValue::create();
-                GuiHelper::worldTransformUniform->properties.dataVariance = vsg::DataVariance::DYNAMIC_DATA;
-                GuiHelper::worldTransformUniform->value().projInverse = perspective->inverse();
-                GuiHelper::worldTransformUniform->value().viewInverse = lookAt->inverse();
+                //GuiHelper::worldTransformUniform = WorldTransformUniformValue::create();
+                //GuiHelper::worldTransformUniform->properties.dataVariance = vsg::DataVariance::DYNAMIC_DATA_TRANSFER_AFTER_RECORD;
                 rootNode->addChild(GuiHelper::stateGroupNodes);
 
-                auto renderGraph = vsg::createRenderGraphForView(*window, camera, rootNode, VK_SUBPASS_CONTENTS_INLINE, false);
-                renderGraph->setClearValues(vsg::sRGB_to_linear(clearColor));
-
-                auto commandGraph = vsg::CommandGraph::create(*window, renderGraph);
-                //auto commandGraph = vsg::createCommandGraphForView(*window, camera, rootNode);
-
-                //viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
-                viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
-
+                if(createWindow)
+                {
+                    new3DWindow(0);
+                }
                 // these are vsgQt::Viewer methods
                 // these functione would start a time in vsgViewer to render images
                 //viewer->setInterval(8);
                 //viewer->continuousUpdate = true;
 
-                vsg::ref_ptr<vsg::ResourceHints> resourceHints;
+                //vsg::ref_ptr<vsg::ResourceHints> resourceHints;
                 //viewer->compile(resourceHints);
                 //viewer->start_point() = vsg::clock::now();
-                container = QWidget::createWindowContainer(window, nullptr);
-                container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
                 // add close handler to respond to the close window button and pressing escape
                 //viewer->addEventHandler(vsg::CloseHandler::create(viewer));
-                vsg::visit<SetGlobalPipelineStates>(rootNode);
-                //viewer->compile();
-                //myQTWidget->show();
-                //container->show();
+
+                // not yet useful
+                //vsg::visit<SetGlobalPipelineStates>(rootNode);
             }
         }
 
         void* GraphicsManager::getWindowManager(int id) {(void)id; return 0;}
 
-        void GraphicsManager::addDrawItems(drawStruct *draw) {(void)draw;} 
+        void GraphicsManager::addDrawItems(drawStruct *draw) {(void)draw;}
         void GraphicsManager::removeDrawItems(DrawInterface *iface) {(void)iface;}
         void GraphicsManager::clearDrawItems(void) {}
 
@@ -332,11 +298,59 @@ namespace mars
         }
 
         void GraphicsManager::setTexture(unsigned long id, const std::string &filename) {(void)id; (void)filename;}
+
         unsigned long GraphicsManager::new3DWindow(void *myQTWidget, bool rtt,
-                                                   int width, int height, const std::string &name) {(void)myQTWidget;(void)rtt;(void)width;(void)height;(void)name;return 0;}
+                                                   int width, int height, const std::string &name)
+        {
+            GraphicsWidget *shared = nullptr;
+            if(windows.size() > 0)
+            {
+                shared = windows.begin()->second;
+                LOG_ERROR("GraphicsManager::new3DWindow have shared window!");
+            }
+            else
+            {
+                LOG_ERROR("GraphicsManager::new3DWindow create first window!");
+            }
+            GraphicsWidget *window = new GraphicsWidget(nullptr, rootNode, nextWindowID, rtt, this);
+            window->name = name;
+
+            window->initialize(nullptr, shared, width, height);
+            windows[nextWindowID] = window;
+            if(!shared)
+            {
+                // todo: solve this for each camera
+                //GuiHelper::worldTransformUniform->value().projInverse = window->perspective->inverse();
+                //GuiHelper::worldTransformUniform->value().viewInverse = window->lookAt->inverse();
+            }
+            dirty = true;
+            return nextWindowID++;
+        }
+
         void GraphicsManager::setGrabFrames(bool value) {(void)value;}
-        GraphicsWindowInterface* GraphicsManager::get3DWindow(unsigned long id) const {(void)id; return 0;}
-        GraphicsWindowInterface* GraphicsManager::get3DWindow(const std::string &name) const {(void)name; return 0;}
+
+        GraphicsWindowInterface* GraphicsManager::get3DWindow(unsigned long id) const
+        {
+            auto iter = windows.find(id);
+            if(iter != windows.end())
+            {
+                return iter->second;
+            }
+            return 0;
+        }
+
+        GraphicsWindowInterface* GraphicsManager::get3DWindow(const std::string &name) const
+        {
+            for(auto &iter: windows)
+            {
+                if(iter.second->name == name)
+                {
+                    return iter.second;
+                }
+            }
+            return 0;
+        }
+
         void GraphicsManager::remove3DWindow(unsigned long id) {(void)id;}
         void GraphicsManager::getList3DWindowIDs(std::vector<unsigned long> *ids) const {(void) ids;}
         void GraphicsManager::removeLayerFromDrawObjects(unsigned long window_id) {(void)window_id;}
@@ -356,8 +370,26 @@ namespace mars
                                                  double text_color[4]) {(void)id; (void)text; (void)text_color;}
         void GraphicsManager::setHUDElementLines(unsigned long id, std::vector<double> *v,
                                                  double color[4]) {(void)id; (void)v;(void)color;}
-        void* GraphicsManager::getQTWidget(unsigned long id) const {(void)id;return container;}
-        void GraphicsManager::showQTWidget(unsigned long id) {(void)id;}
+
+        void* GraphicsManager::getQTWidget(unsigned long id) const
+        {
+            auto iter = windows.find(id);
+            if(iter != windows.end())
+            {
+                return iter->second->container;
+            }
+            return 0;
+        }
+
+        void GraphicsManager::showQTWidget(unsigned long id)
+        {
+            auto iter = windows.find(id);
+            if(iter != windows.end())
+            {
+                iter->second->container->show();
+            }
+        }
+
         void GraphicsManager::addGuiEventHandler(GuiEventInterface *_guiEventHandler) {(void)_guiEventHandler;}
         void GraphicsManager::removeGuiEventHandler(GuiEventInterface *_guiEventHandler) {(void)_guiEventHandler;}
         void GraphicsManager::exportDrawObject(unsigned long id,
@@ -409,9 +441,16 @@ namespace mars
             {
                 graphicsUpdateObject->preGraphicsUpdate();
             }
-            GuiHelper::worldTransformUniform->value().projInverse = perspective->inverse();
-            GuiHelper::worldTransformUniform->value().viewInverse = lookAt->inverse();
-            GuiHelper::worldTransformUniform->dirty();
+
+            // todo: solve this for each camera
+            auto iter = windows.begin();
+            if(iter != windows.end())
+            {
+                auto window = iter->second;
+                //GuiHelper::worldTransformUniform->value().projInverse = window->perspective->inverse();
+                //GuiHelper::worldTransformUniform->value().viewInverse = window->lookAt->inverse();
+                //GuiHelper::worldTransformUniform->dirty();
+            }
             // fprintf(stderr, ". ");
             // // pass any events into EventHandlers assigned to the Viewer
             if(dirty)
@@ -430,7 +469,7 @@ namespace mars
         void GraphicsManager::lock() {}
         void GraphicsManager::unlock() {}
 
-        
+
         LoadMeshInterface* GraphicsManager::getLoadMeshInterface(void)
         {
             //return guiHelper;
@@ -497,7 +536,7 @@ namespace mars
                     }
                     viewer->compile();
                 }
-            }            
+            }
         }
 
         void GraphicsManager::produceData(const data_broker::DataInfo &info,
@@ -515,7 +554,7 @@ namespace mars
             resourcesPath.propertyType = cfg_manager::stringProperty;
             resourcesPath.propertyIndex = 0;
             cfgProperties.push_back(&resourcesPath);
-            
+
             const auto& s = cfg->getOrCreateProperty("Graphics", "resources_path",
                                                      "",
                                                      dynamic_cast<cfg_manager::CFGClient*>(this)).sValue;

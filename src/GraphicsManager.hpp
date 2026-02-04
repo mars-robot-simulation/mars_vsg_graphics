@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gui_helper_functions.hpp"
+#include "GraphicsWidget.hpp"
 
 #include <mars_interfaces/graphics/GraphicsManagerInterface.hpp>
 #include <mars_interfaces/graphics/GraphicsEventInterface.h>
@@ -15,7 +16,7 @@
 
 #include <vsg/all.h>
 #include <vsgXchange/all.h>
-#include <vsgQt/Window.h>
+#include <vsgQt/Viewer.h>
 
 namespace mars
 {
@@ -228,19 +229,17 @@ namespace mars
             virtual void brushTest(mars::utils::Vector start, mars::utils::Vector end) override;
             virtual void brushTestThreaded(std::vector<utils::Vector> start_, std::vector<utils::Vector> end) override;
 
+            vsg::ref_ptr<vsgQt::Viewer> viewer;
+            vsg::ref_ptr<vsg::Group> rootNode;
+
         private:
             interfaces::GraphicData graphicOptions;
             //vsg::ref_ptr<vsg::Viewer> viewer;
-            vsg::ref_ptr<vsgQt::Viewer> viewer;
-            vsgQt::Window *window;
-            QWidget *container;
-            vsg::ref_ptr<vsg::Group> rootNode;
             vsg::ref_ptr<vsg::Node> coords;
-            unsigned long long nextDrawID;
+            unsigned long long nextDrawID, nextWindowID;
             std::map<unsigned long long, DrawObject*> drawObjects;
+            std::map<unsigned long long, GraphicsWidget*> windows;
             GuiHelper *guiHelper;
-            vsg::ref_ptr<vsg::LookAt> lookAt;
-            vsg::ref_ptr<vsg::ProjectionMatrix> perspective;
             bool dirty;
 
             // mars event handling

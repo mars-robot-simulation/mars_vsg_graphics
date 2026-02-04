@@ -22,7 +22,7 @@ layout(push_constant) uniform PushConstants {
     mat4 modelView;
 } pc;
 
-layout(set = 0, binding = 0) uniform WorldTransform{
+layout(set = 1, binding = 5) uniform WorldTransform{
     mat4 projectionInverse;
     mat4 viewInverse;
 } wt;
@@ -42,12 +42,14 @@ layout(push_constant) uniform PushConstants {
     mat4 modelView;
 } pc;
 
-layout(set = 0, binding = 0) uniform WorldTransform{
+/*
+layout(set = 1, binding = 5) uniform WorldTransform{
     mat4 projectionInverse;
     mat4 viewInverse;
 } wt;
+*/
 
-layout(set = 0, binding = 1) uniform PbrMaterial
+layout(set = 0, binding = 0) uniform PbrMaterial
 {
     vec4 baseColorFactor;
     vec4 emissiveFactor;

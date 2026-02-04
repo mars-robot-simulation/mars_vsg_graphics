@@ -50,16 +50,16 @@ namespace mars
             const vsg::ShaderStages shaders{vertexShader, fragmentShader};
 
             vsg::DescriptorSetLayoutBindings descriptorBindings{
-                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr},
-                {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},            // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers}
+                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},            // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers}
                 //{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
             };
             auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
             // todo: howto deal with global uniforms
-            auto worldTransformUniformDescriptor = vsg::DescriptorBuffer::create(GuiHelper::worldTransformUniform, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-            auto materialUniformDescriptor = vsg::DescriptorBuffer::create(vsg::PbrMaterialValue::create(material), 1, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-            auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{worldTransformUniformDescriptor, materialUniformDescriptor});
+            //auto worldTransformUniformDescriptor = vsg::DescriptorBuffer::create(GuiHelper::worldTransformUniform, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            auto materialUniformDescriptor = vsg::DescriptorBuffer::create(vsg::PbrMaterialValue::create(material), 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            //auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{materialUniformDescriptor});
+            auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{materialUniformDescriptor});
 
 
             vsg::PushConstantRanges pushConstantRanges{
@@ -97,11 +97,6 @@ namespace mars
             auto bindGraphicsPipeline = vsg::BindGraphicsPipeline::create(pipeline);
 
 
-            // bind light data
-            vsg::DescriptorSetLayoutBindings viewDescriptorBindings{
-                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // binding for light data
-            };
-            //auto viewLayout = vsg::PipelineLayout::create(vsg::DescriptorSetLayouts{viewDescriptorSetLayout}, pushConstantRanges);
             uint32_t vds_set = 1;
 
             auto root = vsg::StateGroup::create();

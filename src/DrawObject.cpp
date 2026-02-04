@@ -113,7 +113,6 @@ namespace mars
                         //LOG_ERROR("have stateGroup");
                         drawObject = drawObject.cast<vsg::StateGroup>()->children[0];
                     }
-		    //vsg::visit<RemoveShader>(drawObject);
                 }
                 else
                 {
@@ -130,7 +129,7 @@ namespace mars
 /*
                     vsg::ref_ptr<vsg::PbrMaterialValue> materialValue(extractMaterialValue(drawObject));
                     auto material = (vsg::PbrMaterial*)(materialValue->dataPointer(0));
-material->diffuseFactor = vsg::vec4{0.0,0.9,1.0,1.0};
+                    material->diffuseFactor = vsg::vec4{0.0,0.9,1.0,1.0};
 */
                     // material->defines.insert("VSG_TWO_SIDED_LIGHTING");
                     //vsg::ref_ptr<vsg::DescriptorConfigurator> materialConfig = vsg::DescriptorConfigurator::create();

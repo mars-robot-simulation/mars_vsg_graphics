@@ -2,7 +2,7 @@ data_broker
 main_gui
 mars_gui
 #mars_graphics
-mars_vsg_graphicsd
+mars_vsg_graphics
 mars_core
 envire_mars_ode_physics
 envire_mars_ode_collision

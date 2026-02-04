@@ -43,7 +43,7 @@ namespace mars
         {
             void apply(vsg::Object& object) override
                 {
-                    fprintf(stderr, "-------------- traverse %s\n", object.className());
+                    //fprintf(stderr, "-------------- traverse %s\n", object.className());
                     //fprintf(stderr, "-------------- traverse\n");
                     object.traverse(*this);
                 }
@@ -64,7 +64,7 @@ namespace mars
                             {
                                 if(stage->module && stage->module->hints)
                                 {
-                                    fprintf(stderr, "add define two sided lighting\n");
+                                    //fprintf(stderr, "add define two sided lighting\n");
                                     stage->module->hints->defines.insert("VSG_TWO_SIDED_LIGHTING");
                                 }
                             }
