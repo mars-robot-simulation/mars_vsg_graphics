@@ -23,7 +23,18 @@ namespace mars
 
         class GraphicsManager;
         class GraphicsCamera;
+        class GraphicsWidget;
         const unsigned int MASK_2D = 0xF0000000;
+
+        class EventHandler : public vsg::Inherit<vsg::Visitor, EventHandler>
+        {
+        public:
+            GraphicsWidget *gw;
+            void apply(vsg::KeyPressEvent& keyPress) override;
+            void apply(vsg::ButtonPressEvent& buttonPressEvent) override;
+            void apply(vsg::ButtonReleaseEvent& ButtonReleaseEvent) override;
+            void apply(vsg::PointerEvent& pointerEvent) override;
+        };
 
         /**
          * Widget with OpenGL context and event handling.
@@ -65,8 +76,8 @@ namespace mars
 
             virtual void writeRTTImages(void) override;
 
-            //std::vector<osg::Node*> getPickedObjects();
-            //void clearSelectionVectors(void);
+            std::vector<const vsg::MatrixTransform*> getPickedObjects();
+            void clearSelectionVectors(void);
 
             virtual void addGraphicsEventHandler(interfaces::GraphicsEventInterface* _graphicsEventHandler) override;
 
@@ -151,16 +162,22 @@ namespace mars
             virtual void grabFocus() override {}
             //void unsetFocus();
 
+            bool pick(const double x, const double y);
+
             vsg::ref_ptr<vsg::WindowTraits> traits;
             vsgQt::Window *window;
             QWidget *container;
             vsg::ref_ptr<vsg::ImageInfo> colorImageInfo, depthImageInfo;
-            vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage; 
+            vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage;
             vsg::ref_ptr<vsg::RenderGraph> renderGraph;
             GraphicsCamera* graphicsCamera;
 
             // todo: implement setName which applies the name to the window if available
             std::string name;
+            // toggles for the mouse state
+            bool isMouseButtonDown, isMouseMoving;
+            // last mouse position from event queue
+            int mouseX, mouseY;
 
         protected:
             // the widget size
@@ -210,10 +227,6 @@ namespace mars
             // toggle for HUD display
             bool isHUDShown;
 
-            // toggles for the mouse state
-            bool isMouseButtonDown, isMouseMoving;
-            // last mouse position from event queue
-            int mouseX, mouseY;
 
             // destination texture if isRTTWidget==true
             //osg::ref_ptr<osg::Texture2D> rttTexture;
@@ -226,9 +239,9 @@ namespace mars
             //osg::ref_ptr<osg::Image> rttDepthImage;
 
             // list of picked objects
-            // std::vector<osg::Node*> pickedObjects;
-            // enum PickMode { DISABLED, STANDARD, FORCE_ADD, FORCE_REMOVE, SINGLE };
-            // PickMode pickmode;
+            std::vector<const vsg::MatrixTransform*> pickedObjects;
+            enum PickMode { DISABLED, STANDARD, FORCE_ADD, FORCE_REMOVE, SINGLE };
+            PickMode pickmode;
             // bool brushmode;
             vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Context& context,
                                                                       const VkExtent2D& extent);

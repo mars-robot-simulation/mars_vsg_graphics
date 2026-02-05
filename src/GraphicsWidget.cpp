@@ -27,6 +27,30 @@ namespace mars
         using std::cerr;
         using std::endl;
 
+        void EventHandler::apply(vsg::KeyPressEvent& keyPress)
+        {
+            //cout << "key press: " << keyPress.keyModifier << "\tkey: " << keyPress.keyBase << endl;
+        }
+
+        void EventHandler::apply(vsg::ButtonPressEvent& event)
+        {
+            gw->mouseX = event.x;
+            gw->mouseY = event.y;
+        }
+
+        void EventHandler::apply(vsg::ButtonReleaseEvent& event)
+        {
+            if(gw->mouseX - event.x < 5 && gw->mouseY - event.y < 5)
+            {
+                gw->pick(event.x, event.y);
+            }
+        }
+
+        void EventHandler::apply(vsg::PointerEvent& pointerEvent)
+        {
+            //cout << "pointer: " << pointerEvent.x << " " << pointerEvent.y << endl;
+        }
+
         vsg::ref_ptr<vsg::RenderGraph> GraphicsWidget::createOffscreenRendergraph(vsg::Context& context,
                                                                                   const VkExtent2D& extent)
         {
@@ -313,6 +337,8 @@ namespace mars
                 window = new vsgQt::Window(gm->viewer, traits, (QWindow*)nullptr);
                 window->setTitle(traits->windowTitle.c_str());
                 window->initializeWindow();
+                //window->setFocusPolicy(Qt::StrongFocus);
+
                 if (!window)
                 {
                     LOG_ERROR("GraphicsWidget::initialize Could not create window.");
@@ -347,6 +373,10 @@ namespace mars
                 gm->viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
                 container = QWidget::createWindowContainer(window, nullptr);
                 container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
+                container->setFocusPolicy(Qt::StrongFocus);
+                auto eventHandler = EventHandler::create();
+                eventHandler->gw = this;
+                gm->viewer->addEventHandler(eventHandler);
             }
         }
 
@@ -555,6 +585,47 @@ namespace mars
                 //cv::Mat img;
                 //imageData.data()
             }
+        }
+
+        std::vector<const vsg::MatrixTransform*> GraphicsWidget::getPickedObjects()
+        {
+            return pickedObjects;
+        }
+
+        void GraphicsWidget::clearSelectionVectors(void)
+        {
+            pickedObjects.clear();
+        }
+
+        bool GraphicsWidget::pick(const double x, const double y)
+        {
+            auto intersector = vsg::LineSegmentIntersector::create(*(graphicsCamera->camera), x, y);
+            gm->rootNode->accept(*intersector);
+            if (intersector->intersections.empty()) return false;
+            // sort the intersections front to back
+            auto intersection = intersector->intersections[0];
+            for(auto &it : intersector->intersections)
+            {
+                if(it->ratio < intersection->ratio)
+                {
+                    intersection = it;
+                }
+            }
+            LOG_ERROR("found intersection at %g %g %g", intersection->worldIntersection.x, intersection->worldIntersection.y, intersection->worldIntersection.z);
+            const vsg::MatrixTransform* transform;
+
+            for (auto node : intersection->nodePath)
+            {
+                transform = node->cast<vsg::MatrixTransform>();
+                if(transform)
+                {
+                    LOG_ERROR("... found transform");
+                    pickedObjects.push_back(transform);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
     } // end of namespace vsg_graphics
