@@ -73,6 +73,7 @@ add_definitions(-DMARS_VSG_GRAPHICS_DEFAULT_RESOURCES_PATH=\"${CMAKE_INSTALL_PRE
 set(HEADERS
            src/GraphicsManager.hpp
            src/GraphicsWidget.hpp
+           src/GraphicsCamera.hpp
            src/ViewDependentState.hpp
            src/DrawObject.hpp
            src/shader/GraphShader.hpp
@@ -87,6 +88,7 @@ set(HEADERS
 set(SOURCES
            src/GraphicsManager.cpp
            src/GraphicsWidget.cpp
+           src/GraphicsCamera.cpp
            src/ViewDependentState.cpp
            src/DrawObject.cpp
            src/shader/GraphShader.cpp

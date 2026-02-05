@@ -435,16 +435,27 @@ namespace mars
         void* GraphicsManager::getView(unsigned long id) {(void)id;return 0;}
         void GraphicsManager::collideSphere(unsigned long id, mars::utils::Vector pos,
                                             sReal radius) {(void)id;(void)pos;(void)radius;}
+
         const utils::Vector& GraphicsManager::getDrawObjectPosition(unsigned long id)
         {
-            (void)id;
             static Vector dummy;
+            auto it = drawObjects.find(id);
+            if(it != drawObjects.end())
+            {
+                return it->second->getPosition();
+            }
             return dummy;
         }
+
         const utils::Quaternion& GraphicsManager::getDrawObjectQuaternion(unsigned long id)
         {
             (void)id;
             static  Quaternion dummy;
+            auto it = drawObjects.find(id);
+            if(it != drawObjects.end())
+            {
+                return it->second->getQuaternion();
+            }
             return dummy;
         }
 
@@ -478,6 +489,10 @@ namespace mars
             // viewer->update();
             // viewer->recordAndSubmit();
             // viewer->present();
+            for(auto& graphicsUpdateObject: graphicsUpdateObjects)
+            {
+                graphicsUpdateObject->postGraphicsUpdate();
+            }
         }
 
         void GraphicsManager::lock() {}

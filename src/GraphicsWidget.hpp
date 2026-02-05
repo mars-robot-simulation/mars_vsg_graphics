@@ -22,6 +22,7 @@ namespace mars
     {
 
         class GraphicsManager;
+        class GraphicsCamera;
         const unsigned int MASK_2D = 0xF0000000;
 
         /**
@@ -153,12 +154,10 @@ namespace mars
             vsg::ref_ptr<vsg::WindowTraits> traits;
             vsgQt::Window *window;
             QWidget *container;
-            vsg::ref_ptr<vsg::LookAt> lookAt;
-            vsg::ref_ptr<vsg::Perspective> perspective;
             vsg::ref_ptr<vsg::ImageInfo> colorImageInfo, depthImageInfo;
             vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage; 
             vsg::ref_ptr<vsg::RenderGraph> renderGraph;
-            vsg::ref_ptr<vsg::Camera> camera;
+            GraphicsCamera* graphicsCamera;
 
             // todo: implement setName which applies the name to the window if available
             std::string name;
@@ -183,7 +182,6 @@ namespace mars
             bool isRTTWidget;
 
             // the OpenGL/OSG camera
-            //GraphicsCamera* graphicsCamera;
 
             // handles some events
             std::vector<interfaces::GraphicsEventInterface *> graphicsEventHandler;

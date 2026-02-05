@@ -1,6 +1,7 @@
 #include <QWidget>
 
 #include "GraphicsWidget.hpp"
+#include "GraphicsCamera.hpp"
 #include "GraphicsManager.hpp"
 #include "ViewDependentState.hpp"
 
@@ -181,7 +182,7 @@ namespace mars
                                        unsigned long id,
                                        bool isRTTWidget,
                                        GraphicsManager* gm):
-            gm{gm}, hasFocus{false}
+            gm{gm}, hasFocus{false}, graphicsCamera(nullptr)
         {
             // todo: check parent handling
             (void)parent;
@@ -213,6 +214,11 @@ namespace mars
              * (e.g. from the QWidget) we have to increment the referece counter
              * to prevent osg from calling the destructor one more time.
              */
+            if(graphicsCamera)
+            {
+                delete graphicsCamera;
+            }
+
             if(gm)
             {
                 fprintf(stderr, "~GraphicsWidget: do we have to remove the widget from manager?\n");
@@ -260,12 +266,9 @@ namespace mars
                 }
 
                 LOG_ERROR("GraphicsWidget create RTT window.");
-                VkExtent2D targetExtent{(unsigned int)width, (unsigned int)height};
-                double radius = 1.0;
-                lookAt = vsg::LookAt::create(vsg::dvec3(radius * 2.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
-                perspective = vsg::Perspective::create(30.0, static_cast<double>(width) / static_cast<double>(height), 0.001 * radius, radius * 100.5);
-                camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(targetExtent));
 
+                graphicsCamera = new GraphicsCamera(width, height);
+                VkExtent2D targetExtent{(unsigned int)width, (unsigned int)height};
                 auto context = vsg::Context::create(traits->device);
 
                 VkFormat offscreenImageFormat = VK_FORMAT_B8G8R8A8_SRGB;
@@ -289,7 +292,7 @@ namespace mars
                 //auto renderGraph = createOffscreenRendergraph(*context, targetExtent);
                 renderGraph->setClearValues(vsg::sRGB_to_linear(clearColor_), VkClearDepthStencilValue{0.0f, 0});
 
-                auto view = vsg::View::create(camera);
+                auto view = vsg::View::create(graphicsCamera->camera);
                 view->viewDependentState = ViewDependentState::create(view);
                 renderGraph->addChild(view);
                 view->addChild(gm->rootNode);
@@ -321,17 +324,12 @@ namespace mars
                 uint32_t height = window->traits->height;
                 fprintf(stderr, "-------- with: %u\theight: %u\n", width, height);
 
-                // todo: move camera handling to GraphicsCamera implementation
-                double radius = 1.0;
-                lookAt = vsg::LookAt::create(vsg::dvec3(radius * 2.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
-                perspective = vsg::Perspective::create(30.0, static_cast<double>(width) / static_cast<double>(height), 0.001 * radius, radius * 100.5);
-                auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(VkExtent2D{width, height}));
-
-                auto trackball = vsg::Trackball::create(camera);
+                graphicsCamera = new GraphicsCamera(width, height);
+                auto trackball = vsg::Trackball::create(graphicsCamera->camera);
                 trackball->addWindow(*window);
                 gm->viewer->addEventHandler(trackball);
 
-                auto view = vsg::View::create(camera);
+                auto view = vsg::View::create(graphicsCamera->camera);
                 // try to override view dependent state implementation
                 view->viewDependentState = ViewDependentState::create(view);
                 view->addChild(gm->rootNode);
@@ -381,8 +379,7 @@ namespace mars
 
         GraphicsCameraInterface* GraphicsWidget::getCameraInterface(void) const
         {
-            LOG_ERROR("GraphicsWidget: getCameraInterface no implemented yet!");
-            return NULL;
+            return graphicsCamera;
         }
 
         void GraphicsWidget::switchHudElemtVis(int num_element)
@@ -433,7 +430,13 @@ namespace mars
                     return;
                 }
                 auto imageData = ::getImageData(gm->viewer, traits->device, captureImage);
-                memcpy(buffer, imageData->dataPointer(), width*height*4);
+                // in openscenegraph / mars_graphics images where flipped; to stay compatible we flip
+                // the image as well
+                char* destinationBuffer = (char*)imageData->dataPointer();
+                for(int i=0; i<height; ++i)
+                {
+                    memcpy(buffer+(height-i-1)*width*4, destinationBuffer+i*width*4, width*4);
+                }
 
             } else
             {
@@ -470,10 +473,10 @@ namespace mars
                     return;
                 }
                 double fovy, aspectRatio, Zn, Zf;
-                fovy = perspective->fieldOfViewY;
-                aspectRatio = perspective->aspectRatio;
-                Zn  = perspective->nearDistance;
-                Zf  = perspective->farDistance;
+                fovy = graphicsCamera->perspective->fieldOfViewY;
+                aspectRatio = graphicsCamera->perspective->aspectRatio;
+                Zn  = graphicsCamera->perspective->nearDistance;
+                Zf  = graphicsCamera->perspective->farDistance;
                 auto imageData = ::getImageData(gm->viewer, traits->device, captureDepthImage);
                 int d = 0;
                 float *data2 = (float*)(imageData->dataPointer());
