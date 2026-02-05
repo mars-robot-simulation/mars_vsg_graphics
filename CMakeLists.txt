@@ -56,16 +56,6 @@ find_package(vsgQt)
 set (QT_USE_QTOPENGL TRUE)
 setup_qt()
 
-if (${USE_QT5})
-set( OSG_QT openscenegraph-osgQt5)
-else (${USE_QT5})
-set( OSG_QT openscenegraph-osgQt)
-endif (${USE_QT5})
-
-pkg_check_modules(OSGQT ${OSG_QT})
-if(OSGQT_FOUND)
-    list(APPEND DEPENDENCIES ${OSG_QT})
-endif()
 pkg_check_modules(Dependencies REQUIRED IMPORTED_TARGET ${DEPENDENCIES})
 
 add_definitions(-DMARS_VSG_GRAPHICS_DEFAULT_RESOURCES_PATH=\"${CMAKE_INSTALL_PREFIX}/share/mars_vsg_graphics\")
