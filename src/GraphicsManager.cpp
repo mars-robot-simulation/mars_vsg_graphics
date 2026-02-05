@@ -148,6 +148,8 @@ namespace mars
                 nodeSpec.toConfigMap(&spec, false, false);
                 DrawObject *drawObject = new DrawObject();
                 drawObject->createObject(spec);
+                drawObject->name = snode.name;
+                drawObject->id = nextDrawID;
                 drawObjects[nextDrawID++] = drawObject;
                 if(!activated)
                 {
@@ -163,7 +165,19 @@ namespace mars
             return 0;
         }
 
-        unsigned long GraphicsManager::getDrawID(const std::string &name) const {(void)name; return 0;}
+        unsigned long GraphicsManager::getDrawID(const std::string &name) const
+        {
+            (void)name;
+            for(auto &it: drawObjects)
+            {
+                if(it.second->name == name)
+                {
+                    return it.second->id;
+                }
+            }
+            return 0;
+        }
+
         void GraphicsManager::removeDrawObject(unsigned long id) {(void)id;}
         void GraphicsManager::setDrawObjectPos(unsigned long id,
                                       const mars::utils::Vector &pos)

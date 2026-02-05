@@ -28,6 +28,9 @@ namespace mars
                 { return quaternion; }
             void setVisible(bool v);
 
+            std::string name;
+            unsigned long id;
+
         private:
             vsg::ref_ptr<vsg::MatrixTransform> poseTransform;
             vsg::ref_ptr<vsg::MatrixTransform> scaleTransform;

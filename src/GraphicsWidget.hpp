@@ -62,6 +62,8 @@ namespace mars
             //osg::Image* getRTTImage(void);
             //osg::Image* getRTTDepthImage(void);
 
+            virtual void writeRTTImages(void) override;
+
             //std::vector<osg::Node*> getPickedObjects();
             //void clearSelectionVectors(void);
 
@@ -152,7 +154,11 @@ namespace mars
             vsgQt::Window *window;
             QWidget *container;
             vsg::ref_ptr<vsg::LookAt> lookAt;
-            vsg::ref_ptr<vsg::ProjectionMatrix> perspective;
+            vsg::ref_ptr<vsg::Perspective> perspective;
+            vsg::ref_ptr<vsg::ImageInfo> colorImageInfo, depthImageInfo;
+            vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage; 
+            vsg::ref_ptr<vsg::RenderGraph> renderGraph;
+            vsg::ref_ptr<vsg::Camera> camera;
 
             // todo: implement setName which applies the name to the window if available
             std::string name;
@@ -226,6 +232,8 @@ namespace mars
             // enum PickMode { DISABLED, STANDARD, FORCE_ADD, FORCE_REMOVE, SINGLE };
             // PickMode pickmode;
             // bool brushmode;
+            vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Context& context,
+                                                                      const VkExtent2D& extent);
 
             //virtual void initialize() {};
 
