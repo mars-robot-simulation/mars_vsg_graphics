@@ -31,9 +31,9 @@ namespace mars
             configmaps::ConfigMap options;
             std::string main_source;
             std::map<std::string, std::string> source_files;
-            std::set<ShaderUniformT> uniforms;
-            std::set<ShaderAttributeT> varyings;
-            std::set<ShaderAttributeT> attributes;
+            std::map<std::string, ShaderUniformT> uniforms;
+            std::map<std::string, ShaderAttributeT> varyings;
+            std::map<std::string, ShaderAttributeT> attributes;
         };
     }
 }

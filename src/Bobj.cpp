@@ -65,7 +65,9 @@ namespace mars
                             //fData[i] = *(float*)(buffer+o);
                             o+=4;
                         }
-                        texcoords.push_back(vsg::vec2(fData[0], fData[1]));
+                        // todo: for some reason we have to flip the y axis
+                        // it seems that the open gl convenction for the y axis is opposite to vulkan
+                        texcoords.push_back(vsg::vec2(fData[0], 1-fData[1]));
                     }
                     else if(da == 3)
                     {
@@ -223,7 +225,22 @@ namespace mars
             vsg::DataList arrays;
             arrays.push_back(vsgVertices);
             if (vsgNormals->size()) arrays.push_back(vsgNormals);
-            if (vsgTexcoords->size()) arrays.push_back(vsgTexcoords);
+            if (vsgTexcoords->size()) {
+                arrays.push_back(vsgTexcoords);
+            }
+            // todo: we have to handle the attribute mapping correctly
+            // if we have no texcoords we should generete a vec2(0,0)
+            // but this also requires a different attribute binding
+            // so atrribute binding have to be done per mesh and not per material
+            // else
+            // {
+            //     vsgTexcoords = new vsg::vec2Array(vsgVertices->size());
+            //     for(int i=0; i<vsgVertices->size(); ++i)
+            //     {
+            //         vsgTexcoords->at(i) = vsg::vec2(0.0, 0.0);
+            //     }
+            //     arrays.push_back(vsgTexcoords);
+            // }
             if (vsgColors->size()) arrays.push_back(vsgColors);
             // LOG_ERROR("num vertices: %lu", vsgVertices->size());
             // LOG_ERROR("num indices: %lu", vsgIndices->size());

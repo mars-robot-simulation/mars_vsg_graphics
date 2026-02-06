@@ -12,6 +12,16 @@ namespace mars
         vsg::ref_ptr<vsg::StateGroup> MARSStateGroup::create(configmaps::ConfigMap materialSpec)
         {
 
+            std::string loadPath = ".";
+            if(materialSpec.hasKey("loadPath"))
+            {
+                loadPath << materialSpec["loadPath"];
+            }
+            if(materialSpec.hasKey("filePrefix"))
+            {
+                loadPath << materialSpec["filePrefix"];
+            }
+
             // create material info for shader
             vsg::PbrMaterial material;
             material.baseColorFactor[0] = (double)materialSpec["ambientColor"]["r"];
@@ -27,6 +37,16 @@ namespace mars
             material.specularFactor[2] = (double)materialSpec["specularColor"]["b"];
             material.specularFactor[3] = (double)materialSpec["specularColor"]["a"];
 
+            vsg::ref_ptr<vsg::Data> diffuseImage;
+            vsg::ref_ptr<vsg::DescriptorImage> diffuseTexture;
+            if(materialSpec.hasKey("diffuseTexture"))
+            {
+                //fprintf(stderr, "%s\n", materialSpec.toYamlString().c_str());
+                std::string filename = materialSpec["diffuseTexture"];
+                filename = utils::pathJoin(loadPath, filename);
+                diffuseImage = GuiHelper::loadImage(filename);
+            }
+
             material.roughnessFactor = 10.0/(double)materialSpec["shininess"];
             if(material.roughnessFactor > 1.0) material.roughnessFactor = 1.0;
 
@@ -35,10 +55,40 @@ namespace mars
             // load shaders
             std::string vertexShaderFile = utils::pathJoin(GuiHelper::resourcePath, "resources/graph_shader/default_vertex_shader.yml");
             std::string fragmentShaderFile = utils::pathJoin(GuiHelper::resourcePath, "resources/graph_shader/default_fragment_shader.yml");
+            if(diffuseImage)
+            {
+                fragmentShaderFile = utils::pathJoin(GuiHelper::resourcePath, "resources/graph_shader/default_diffuseMap_fragment_shader.yml");
+                LOG_ERROR("load diffuseMap shader");
+            }
             GraphShader &vs = GuiHelper::readGraphShaderFromFile(vertexShaderFile);
             GraphShader &fs = GuiHelper::readGraphShaderFromFile(fragmentShaderFile);
             // copy varyings from vertex shader to fragment shader
             fs.varyings = vs.varyings;
+
+            unsigned short binding = 0;
+            vsg::DescriptorSetLayoutBindings descriptorBindings{
+                {binding++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},            // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers}
+                //{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
+            };
+            if(diffuseImage)
+            {
+                descriptorBindings.push_back({binding++, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr});
+            }
+            auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
+
+            if(diffuseImage)
+            {
+                for(auto &u : fs.uniforms)
+                {
+                    if(u.second.name == "diffuseMap")
+                    {
+                        u.second.set = 0;
+                        u.second.binding = binding-1;
+                    }
+                }
+                diffuseTexture = vsg::DescriptorImage::create(vsg::Sampler::create(), diffuseImage, binding-1, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            }
+
 
             // for testing we try to load shaders from working dir
             auto vertexShader = vsg::ShaderStage::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vs.generateVertexShaderSource());
@@ -49,17 +99,22 @@ namespace mars
             }
             const vsg::ShaderStages shaders{vertexShader, fragmentShader};
 
-            vsg::DescriptorSetLayoutBindings descriptorBindings{
-                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},            // { binding, descriptorType, descriptorCount, stageFlags, pImmutableSamplers}
-                //{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
-            };
-            auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
+            // if(diffuseTexture)
+            // {
+            //     fprintf(stderr, "vertex shader:\n%s\n", vs.generateVertexShaderSource().c_str());
+            //     fprintf(stderr, "fragment shader:\n%s\n", fs.generateFragmentShaderSource().c_str());
+            // }
 
             // todo: howto deal with global uniforms
             //auto worldTransformUniformDescriptor = vsg::DescriptorBuffer::create(GuiHelper::worldTransformUniform, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
             auto materialUniformDescriptor = vsg::DescriptorBuffer::create(vsg::PbrMaterialValue::create(material), 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
             //auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{materialUniformDescriptor});
-            auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{materialUniformDescriptor});
+            vsg::Descriptors descriptors{materialUniformDescriptor};
+            if(diffuseTexture)
+            {
+                descriptors.push_back(diffuseTexture);
+            }
+            auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, descriptors);
 
 
             vsg::PushConstantRanges pushConstantRanges{
@@ -67,12 +122,14 @@ namespace mars
             };
 
             vsg::VertexInputState::Bindings vertexBindingsDescriptions{
-                VkVertexInputBindingDescription{0, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX},
-                VkVertexInputBindingDescription{1, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}};
+                VkVertexInputBindingDescription{0, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vsg_Vertex
+                VkVertexInputBindingDescription{1, sizeof(vsg::vec3), VK_VERTEX_INPUT_RATE_VERTEX}, // vsg_Normal
+                VkVertexInputBindingDescription{2, sizeof(vsg::vec2), VK_VERTEX_INPUT_RATE_VERTEX}}; // vsg_TexCoord0
 
             vsg::VertexInputState::Attributes vertexAttributeDescriptions{
-                VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
-                VkVertexInputAttributeDescription{1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0}};
+                VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vsg_Vertex
+                VkVertexInputAttributeDescription{1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vsg_Normal
+                VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0}}; // vsg_TexCoord0
 
             auto rasterState = vsg::RasterizationState::create();
             rasterState->cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;

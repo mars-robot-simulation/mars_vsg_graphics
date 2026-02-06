@@ -19,25 +19,6 @@ namespace mars
         };
         using WorldTransformUniformValue = vsg::Value<WorldTransformUniform>;
 
-        struct nodeFileStruct
-        {
-            std::string fileName;
-            vsg::ref_ptr<vsg::Node> node;
-        };
-
-        struct textureFileStruct
-        {
-            std::string fileName;
-            vsg::ref_ptr<vsg::DescriptorImage> texture;
-        };
-
-        struct imageFileStruct
-        {
-            std::string fileName;
-            vsg::ref_ptr<vsg::Data> image;
-        };
-
-        
         // enable wireframe mode to visualize line width of the mesh
         struct SetGlobalPipelineStates : public vsg::Visitor
         {
@@ -118,8 +99,8 @@ namespace mars
             static GraphShader& readGraphShaderFromFile(std::string fileName);
             static vsg::ref_ptr<vsg::Node> readNodeFromFile(std::string fileName);
             static vsg::ref_ptr<vsg::Node> readBobjFromFile(const std::string &filename);
-            static vsg::ref_ptr<vsg::Data> loadTexture(std::string filename);
-            static vsg::ref_ptr<vsg::DescriptorImage> loadImage(std::string filename);
+            static vsg::ref_ptr<vsg::Data> loadImage(std::string filename);
+            static vsg::ref_ptr<vsg::DescriptorImage> loadTexture(std::string filename);
             static std::string resourcePath;
             static bool checkBobj(std::string &filename);
             static vsg::ref_ptr<vsg::StateGroup> createStateGroup(configmaps::ConfigMap material);
@@ -138,9 +119,9 @@ namespace mars
             // map to prevent double load of mesh files
             static std::map<std::string, vsg::ref_ptr<vsg::Node>> nodeFiles;
             // // vector to prevent double load of textures
-            // static std::vector<textureFileStruct> textureFiles;
+            static std::map<std::string, vsg::ref_ptr<vsg::DescriptorImage>> textureFiles;
             // // vector to prevent double load of images
-            // static std::vector<imageFileStruct> imageFiles;
+            static std::map<std::string, vsg::ref_ptr<vsg::Data>> imageFiles;
 
             void getPhysicsFromNode(mars::interfaces::NodeData* node,
                                     vsg::ref_ptr<vsg::Node> completeNode);

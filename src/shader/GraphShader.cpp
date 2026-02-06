@@ -29,6 +29,7 @@ layout(set = 1, binding = 5) uniform WorldTransform{
 
 layout(location = 0) in vec3 vsg_Vertex;
 layout(location = 1) in vec3 vsg_Normal;
+layout(location = 2) in vec2 vsg_TexCoord0;
 
 out gl_PerVertex{ vec4 gl_Position; };
 )";
@@ -142,11 +143,11 @@ layout(set = 1, binding = 0) uniform LightData
                     {
                         if(!options.hasKey(name))
                         {
-                            uniforms.insert((ShaderUniformT) {function, name});
+                            uniforms[name] = ShaderUniformT{function, name};
                         }
                     } else if (type == "varying")
                     {
-                        varyings.insert((ShaderAttributeT) {function, name});
+                        varyings[name] = ShaderAttributeT{function, name};
                     }
                 }
             }
@@ -365,14 +366,14 @@ layout(set = 1, binding = 0) uniform LightData
             //         std::cout << "Having enabled extensions" << std::endl;
             //         for (vit=list["enabled"].begin();vit!=list["enabled"].end();vit++)
             //         {
-            //             enabledExtensions.insert(vit.base()->getString());
+            //             enabledExtensions.push_back(vit.base()->getString());
             //         }
             //     }
             //     if (list.hasKey("disabled"))
             //     {
             //         for (vit=list["disabled"].begin();vit!=list["disabled"].end();vit++)
             //         {
-            //             disabledExtensions.insert(vit.base()->getString());
+            //             disabledExtensions.push_back(vit.base()->getString());
             //         }
             //     }
             // }
@@ -411,7 +412,7 @@ layout(set = 1, binding = 0) uniform LightData
                         }
                         if(!options.hasKey(name))
                         {
-                            uniforms.insert((ShaderUniformT) {type_name, name});
+                            uniforms[name] = ShaderUniformT{type_name, name};
                         }
                     }
                 }
@@ -449,7 +450,7 @@ layout(set = 1, binding = 0) uniform LightData
                             s << "[" << num << "]";
                             name.append(s.str());
                         }
-                        varyings.insert((ShaderAttributeT) {type_name, name});
+                        varyings[name] = ShaderAttributeT{type_name, name};
                     }
                 }
             }
@@ -486,7 +487,7 @@ layout(set = 1, binding = 0) uniform LightData
                             s << "[" << num << "]";
                             name.append(s.str());
                         }
-                        attributes.insert((ShaderAttributeT) {type_name, name});
+                        attributes[name] = ShaderAttributeT{type_name, name};
                     }
                 }
             }
@@ -519,7 +520,7 @@ layout(set = 1, binding = 0) uniform LightData
             // todo: check if we have to distinguish between in and out varyings
             for(auto v: varyings)
             {
-                code << "layout(location = " << outIndex++ << ") out " << v << ";" << std::endl;
+                code << "layout(location = " << outIndex++ << ") out " << v.second << ";" << std::endl;
             }
             return code.str();
         }
@@ -534,9 +535,22 @@ layout(set = 1, binding = 0) uniform LightData
             // todo: check if we have to distinguish between in and out varyings
             for(auto v: varyings)
             {
-                code << "layout(location = " << inIndex++ << ") in " << v << ";" << std::endl;
+                code << "layout(location = " << inIndex++ << ") in " << v.second << ";" << std::endl;
             }
             code << "layout(location = 0) out vec4 outColor;" << endl;
+
+            // handle uniforms
+            for(auto u: uniforms)
+            {
+                if(u.second.set < 0 || u.second.binding < 0)
+                {
+                    LOG_WARN("GraphShader::generate(): No set or binding defined for uniform \"%s %s\"... skipping", u.second.type.c_str(), u.second.name.c_str());
+                    continue;
+                }
+                // todo: deal with struct / class types of uniforms
+                code << "layout(set = " << u.second.set << ", binding = " << u.second.binding << ") uniform " << u.second.type << " " << u.second.name << ";" << std::endl;                
+            }
+
             return code.str();
         }
 

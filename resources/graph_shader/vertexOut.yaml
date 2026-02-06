@@ -9,3 +9,5 @@ varyings:
     - {name: normalVarying}
   vec4:
     - {name: modelVertex}
+  vec2:
+    - {name: texCoord0}

@@ -236,7 +236,7 @@ void pixellight_frag(vec4 base, vec3 n, float shadow, out vec4 outcol) {
 
   perceptualRoughness = pbr.roughnessFactor;
   metallic = pbr.metallicFactor;
-  diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
+  diffuseColor = base.rgb * (vec3(1.0) - f0);
   diffuseColor *= 1.0 - metallic;
 
   float alphaRoughness = perceptualRoughness * perceptualRoughness;
@@ -332,6 +332,7 @@ void pixellight_frag(vec4 base, vec3 n, float shadow, out vec4 outcol) {
 
   // calculate output color
   outcol = vec4(color, 1.0);
+  //outcol = vec4(base.rgb, 1.0);
   //outcol = brightness* ((ambient + diffuse_)*base  + specular_ + gl_FrontMaterial.emission*base);
 
   /* if(drawLineLaser == 1) { */

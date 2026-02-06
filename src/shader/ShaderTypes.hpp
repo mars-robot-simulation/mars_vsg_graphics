@@ -11,6 +11,8 @@ namespace mars
         struct ShaderAttributeT
         {
             std::string type, name;
+            int set = -1;
+            int binding = -1;
         };
 
         typedef ShaderAttributeT ShaderVaryingT;

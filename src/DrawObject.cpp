@@ -68,6 +68,14 @@ namespace mars
             //fprintf(stderr, "createObject spec:\n%s\n", spec.toYamlString().c_str());
 
             // todo: prefix material names by worlds?
+            if(spec.hasKey("filePrefix"))
+            {
+                if(!spec["material"].hasKey("filePrefix"))
+                {
+                    spec["material"]["filePrefix"] = spec["filePrefix"];
+                }
+                //fprintf(stderr, "createObject spec:\n%s\n", spec.toYamlString().c_str());
+            }
             auto stateGroup = GuiHelper::createStateGroup(spec["material"]);
 
             if(spec.hasKey("filename"))

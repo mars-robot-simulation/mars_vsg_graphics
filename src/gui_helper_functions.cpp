@@ -17,6 +17,8 @@ namespace mars
         vsg::ref_ptr<vsg::Options> GuiHelper::loadOptions = nullptr;
         std::map<std::string, GraphShader> GuiHelper::graphShaderFiles;
         std::map<std::string, vsg::ref_ptr<vsg::Node>> GuiHelper::nodeFiles;
+        std::map<std::string, vsg::ref_ptr<vsg::DescriptorImage>> GuiHelper::textureFiles;
+        std::map<std::string, vsg::ref_ptr<vsg::Data>> GuiHelper::imageFiles;
         std::map<std::string, vsg::ref_ptr<vsg::StateGroup>> GuiHelper::stateGroups;
         vsg::ref_ptr<vsg::Group> GuiHelper::stateGroupNodes = vsg::StateGroup::create();
         std::string GuiHelper::resourcePath = "";
@@ -172,16 +174,49 @@ namespace mars
             return node;
         }
 
-        vsg::ref_ptr<vsg::Data> GuiHelper::loadTexture(std::string filename)
+        vsg::ref_ptr<vsg::Data> GuiHelper::loadImage(std::string filename)
         {
-            (void)filename;
-            return vsg::ref_ptr<vsg::Data>();
+            { // check if we loaded the file already into memory
+                auto it = imageFiles.find(filename);
+                if(it != imageFiles.end()) {
+                    return it->second;
+                }
+            }
+            if(!loadOptions)
+            {
+                loadOptions = vsg::Options::create(vsgXchange::all::create());
+                // todo: learn the shared concept of vsg, it looks like it provides
+                //       the same functionality as our nodeFiles from MARS1
+                loadOptions->sharedObjects = vsg::SharedObjects::create();
+                loadOptions->add(vsgXchange::all::create());
+                loadOptions->setValue("two_sided", true);
+            }
+            auto imageData = vsg::read_cast<vsg::Data>(filename, loadOptions);
+            if(!imageData)
+            {
+                LOG_ERROR("GuiHelper:: can't load image file: %s", filename.c_str());
+                return nullptr;
+            }
+            imageFiles[filename] = imageData;
+            return imageData;
         }
 
-        vsg::ref_ptr<vsg::DescriptorImage> GuiHelper::loadImage(std::string filename)
+        vsg::ref_ptr<vsg::DescriptorImage> GuiHelper::loadTexture(std::string filename)
         {
-            (void)filename;
-            return vsg::ref_ptr<vsg::DescriptorImage>();
+            { // check if we loaded the file already into memory
+                auto it = textureFiles.find(filename);
+                if(it != textureFiles.end()) {
+                    return it->second;
+                }
+            }
+            auto imageData = GuiHelper::loadImage(filename);
+            if(!imageData)
+            {
+                return nullptr;
+            }
+            auto texture = vsg::DescriptorImage::create(vsg::Sampler::create(), imageData, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            textureFiles[filename] = texture;
+            return texture;
         }
 
         void GuiHelper::getPhysicsFromNode(mars::interfaces::NodeData* node,

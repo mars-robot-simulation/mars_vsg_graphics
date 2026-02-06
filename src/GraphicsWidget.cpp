@@ -314,6 +314,8 @@ namespace mars
                 renderGraph->renderArea.extent = renderGraph->framebuffer->extent2D();
 
                 //auto renderGraph = createOffscreenRendergraph(*context, targetExtent);
+                // Vulkan default depth buffer should be cleared with 1.0, somehow with vsg we have to clear it with 0.0
+                // we assume that vsg configures vulkan to use reversed depth to have more precision on long distances
                 renderGraph->setClearValues(vsg::sRGB_to_linear(clearColor_), VkClearDepthStencilValue{0.0f, 0});
 
                 auto view = vsg::View::create(graphicsCamera->camera);
