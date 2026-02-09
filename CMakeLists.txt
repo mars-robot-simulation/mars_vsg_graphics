@@ -119,6 +119,8 @@ if(WIN32)
 endif(WIN32)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")
+set_target_properties(${PROJECT_NAME} PROPERTIES RELEASR_POSTFIX "")
+set_target_properties(${PROJECT_NAME} PROPERTIES RELWITHDEBINFO_POSTFIX "")
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
