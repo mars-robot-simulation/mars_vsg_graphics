@@ -10,6 +10,9 @@
     <depend package="simulation/data_broker" />
     <depend package="tools/configmaps" />
     <depend package="simulation/mars2/mars_interfaces" />
+    <depend package="external/VulkanSceneGraph" />
+    <depend package="external/vsgXchange" />
+    <depend package="external/vsgQt" />
     <!--depend package="some Vulkan dependencies that have to be defined"-->
     <tags>needs_opt</tags>
 </package>
