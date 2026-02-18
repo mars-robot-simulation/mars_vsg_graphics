@@ -70,15 +70,16 @@ namespace mars
                 // options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
 
                 rootNode = vsg::Group::create();
-
                 if(showCoords_.bValue)
                 {
                     showCoords();
                 }
+                contentGroup = vsg::Group::create();
+                rootNode->addChild(contentGroup);
 
                 auto ambientLight = vsg::AmbientLight::create();
                 ambientLight->name = "ambient";
-                ambientLight->color.set(1.0f, 1.0f, 1.0f);
+                ambientLight->color.set(0.5f, 0.5f, 0.5f);
                 ambientLight->intensity = 0.02f;
                 rootNode->addChild(ambientLight);
 
@@ -86,7 +87,7 @@ namespace mars
                 directionalLight->name = "directional";
                 directionalLight->color.set(1.0f, 1.0f, 1.0f);
                 directionalLight->intensity = 0.7f;
-                directionalLight->direction.set(-1.0f, -1.0f, -1.0f);
+                directionalLight->direction.set(-1.0f, -1.0f, -5.0f);
                 rootNode->addChild(directionalLight);
 
 
