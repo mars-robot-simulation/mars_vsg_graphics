@@ -272,6 +272,7 @@ namespace mars
             {
                 traits = vsg::WindowTraits::create();
                 traits->windowTitle = name;
+                traits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
             }
 
             //traits->width = width;
