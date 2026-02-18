@@ -637,7 +637,13 @@ namespace mars
         void GraphicsManager::activate3DWindow(unsigned long id) {(void)id;}
 
         // be carful with this method, only add a valid pointer osg::Node*
-        void GraphicsManager::addOSGNode(void* node) {(void)node;}
+        void GraphicsManager::addOSGNode(void* node)
+        {
+            vsg::ref_ptr<vsg::Node> n(static_cast<vsg::Node*>(node));
+            contentGroup->addChild(n);
+            dirty = true;
+        }
+
         void GraphicsManager::removeOSGNode(void* node) {(void)node;}
         unsigned long GraphicsManager::addHUDOSGNode(void* node) {(void)node;return 0;}
         bool GraphicsManager::isInitialized() const {return 0;}
