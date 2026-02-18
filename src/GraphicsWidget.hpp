@@ -170,7 +170,8 @@ namespace mars
             vsg::ref_ptr<vsg::ImageInfo> colorImageInfo, depthImageInfo;
             vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage;
             vsg::ref_ptr<vsg::RenderGraph> renderGraph;
-            GraphicsCamera* graphicsCamera;
+            vsg::ref_ptr<vsg::Group> overlayGroup;
+            GraphicsCamera *graphicsCamera;
 
             // todo: implement setName which applies the name to the window if available
             std::string name;
