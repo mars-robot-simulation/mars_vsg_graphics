@@ -29,13 +29,13 @@ namespace mars
             std::vector<vsg::vec3> normals;
             std::vector<vsg::vec2> texcoords;
             std::vector<vsg::vec4> colors;
-            std::vector<unsigned short> indices;
+            std::vector<unsigned int> indices;
 
             std::vector<vsg::vec3> vertices2;
             std::vector<vsg::vec3> normals2;
             std::vector<vsg::vec2> texcoords2;
             std::vector<vsg::vec4> colors2;
-            std::vector<unsigned short> indices2;
+            std::vector<unsigned int> indices2;
 
             bool useIndices = true;
             int indicesCount = 0;
@@ -179,14 +179,14 @@ namespace mars
             vsg::ref_ptr<vsg::vec2Array> vsgTexcoords;
             vsg::ref_ptr<vsg::vec3Array> vsgNormals;
             vsg::ref_ptr<vsg::vec4Array> vsgColors;
-            vsg::ref_ptr<vsg::ushortArray> vsgIndices;
+            vsg::ref_ptr<vsg::uintArray> vsgIndices;
             if(useIndices)
             {
                 vsgVertices = new vsg::vec3Array(vertices.size());
                 vsgTexcoords = new vsg::vec2Array(texcoords.size());
                 vsgNormals = new vsg::vec3Array(normals.size());
                 vsgColors = new vsg::vec4Array(colors.size());
-                vsgIndices = new vsg::ushortArray(indices.size());
+                vsgIndices = new vsg::uintArray(indices.size());
                 auto itr = vsgIndices->begin();
                 for(i=0; i<indices.size(); ++i)
                 {
@@ -212,10 +212,10 @@ namespace mars
                 vsgTexcoords = new vsg::vec2Array(texcoords2.size());
                 vsgNormals = new vsg::vec3Array(normals2.size());
                 vsgColors = new vsg::vec4Array(colors2.size());
-                vsgIndices = new vsg::ushortArray(indices2.size());
+                vsgIndices = new vsg::uintArray(indices2.size());
                 std::memcpy(vsgVertices->dataPointer(), vertices2.data(), vertices2.size() * 12);
                 std::memcpy(vsgNormals->dataPointer(), normals2.data(), normals2.size() * 12);
-                std::memcpy(vsgIndices->dataPointer(), indices2.data(), indices2.size() * 2);
+                std::memcpy(vsgIndices->dataPointer(), indices2.data(), indices2.size() * 4);
                 std::memcpy(vsgTexcoords->dataPointer(), texcoords2.data(), texcoords2.size() * 8);
                 std::memcpy(vsgColors->dataPointer(), colors2.data(), colors2.size() * 16);
             }
