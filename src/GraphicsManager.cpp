@@ -2,6 +2,7 @@
 
 #include "GraphicsManager.hpp"
 #include "DrawObject.hpp"
+#include "Grid.hpp"
 #include "config.h"
 #include <vsgXchange/all.h>
 #include <mars_utils/misc.h>
@@ -70,10 +71,6 @@ namespace mars
                 // options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
 
                 rootNode = vsg::Group::create();
-                if(showCoords_.bValue)
-                {
-                    showCoords();
-                }
                 contentGroup = vsg::Group::create();
                 rootNode->addChild(contentGroup);
 
@@ -100,12 +97,47 @@ namespace mars
                 //       in the camera update method
                 //GuiHelper::worldTransformUniform = WorldTransformUniformValue::create();
                 //GuiHelper::worldTransformUniform->properties.dataVariance = vsg::DataVariance::DYNAMIC_DATA_TRANSFER_AFTER_RECORD;
-                rootNode->addChild(GuiHelper::stateGroupNodes);
+                contentGroup->addChild(GuiHelper::stateGroupNodes);
 
                 if(createWindow)
                 {
                     new3DWindow(0);
                 }
+
+                auto options = GuiHelper::getOrCreateOptions();
+                std::string fontFilename = utils::pathJoin(GuiHelper::resourcePath, "resources/Fonts/IBMPlexSans-Medium.ttf");
+
+                auto shaderSet = options->shaderSets["text"] = vsg::createTextShaderSet(options);
+
+                // create a DepthStencilState, disable depth test and add this to the ShaderSet::defaultGraphicsPipelineStates container so it's used when setting up the TextGroup subgraph
+                auto depthStencilState = vsg::DepthStencilState::create();
+                depthStencilState->depthTestEnable = VK_FALSE;
+                shaderSet->defaultGraphicsPipelineStates.push_back(depthStencilState);
+
+                auto font = vsg::read_cast<vsg::Font>(fontFilename, options);
+                if(!font)
+                {
+                    LOG_ERROR("GraphicsManager: unable to load font %s", fontFilename.c_str());
+                }
+
+                fpsLayout = vsg::StandardLayout::create();
+                fpsLayout->horizontalAlignment = vsg::StandardLayout::LEFT_ALIGNMENT;
+                fpsLayout->position = vsg::vec3(-0.0, -0.75, 0.5);
+                fpsLayout->horizontal = vsg::vec3(0.025, 0.0, 0.0);
+                fpsLayout->vertical = vsg::vec3(0.0, 0.025, 0.0);
+                fpsLayout->color = vsg::vec4(0.2, 0.7, 0.2, 1.0);
+                fpsLayout->outlineWidth = 0.1f;
+                fpsLayout->billboard = true;
+
+                fpsText = vsg::stringValue::create("fps: 0");
+
+                fpsNode = vsg::Text::create();
+                fpsNode->technique = vsg::GpuLayoutTechnique::create();
+                fpsNode->text = fpsText;
+                fpsNode->font = font;
+                fpsNode->layout = fpsLayout;
+                fpsNode->setup(32, options);
+
                 // these are vsgQt::Viewer methods
                 // these functione would start a time in vsgViewer to render images
                 //viewer->setInterval(8);
@@ -119,6 +151,18 @@ namespace mars
 
                 // not yet useful
                 //vsg::visit<SetGlobalPipelineStates>(rootNode);
+                if(showCoords_.bValue)
+                {
+                    showCoords();
+                }
+                if(showGrid_.bValue)
+                {
+                    showGrid();
+                }
+                if(showFPS_.bValue)
+                {
+                    showFPS();
+                }
             }
         }
 
@@ -234,6 +278,7 @@ namespace mars
             if(coords)
             {
                 rootNode->children.erase(std::find(rootNode->children.begin(), rootNode->children.end(), coords));
+                dirty = true;
             }
         }
 
@@ -255,6 +300,26 @@ namespace mars
 
         void GraphicsManager::setCamera(int type) {(void)type;}
 
+
+        void GraphicsManager::showFPS()
+        {
+            if(windows.find(1) != windows.end() && windows[1]->overlayGroup)
+            {
+                windows[1]->overlayGroup->addChild(fpsNode);
+                dirty = true;
+            }
+        }
+
+        void GraphicsManager::hideFPS()
+        {
+            if(windows.find(1) != windows.end() && windows[1]->overlayGroup)
+            {
+                vsg::ref_ptr<vsg::Group> &node = windows[1]->overlayGroup;
+                node->children.erase(std::find(node->children.begin(), node->children.end(), fpsNode));
+                dirty = true;
+            }
+        }
+
         void GraphicsManager::showCoords()
         {
             if(!coords)
@@ -274,7 +339,7 @@ namespace mars
             }
             if(coords)
             {
-                rootNode->addChild(coords);
+                rootNode->children.insert(rootNode->children.begin(), coords);
                 dirty = true;
             }
         }
@@ -299,8 +364,29 @@ namespace mars
         const interfaces::GraphicData GraphicsManager::getGraphicOptions(void) const {return graphicOptions;}
         void GraphicsManager::setGraphicOptions(const GraphicData &options,
                                                 bool ignoreClearColor) {(void)options; (void)ignoreClearColor;}
-        void GraphicsManager::showGrid(void) {}
-        void GraphicsManager::hideGrid(void) {}
+        void GraphicsManager::showGrid(void)
+        {
+            if(!grid)
+            {
+                grid = Grid::create();
+            }
+            if(grid)
+            {
+                rootNode->children.insert(rootNode->children.end(), grid);
+                dirty = true;
+            }
+
+        }
+
+        void GraphicsManager::hideGrid(void)
+        {
+            if(grid)
+            {
+                rootNode->children.erase(std::find(rootNode->children.begin(), rootNode->children.end(), grid));
+                dirty = true;
+            }
+        }
+
         void GraphicsManager::updateLight(unsigned int index, bool recompileShader) {(void)index;(void)recompileShader;}
         void GraphicsManager::getLights(std::vector<LightData*> *lightList) {(void)lightList;}
         void GraphicsManager::getLights(std::vector<LightData> *lightList) const {(void)lightList;}
@@ -467,6 +553,36 @@ namespace mars
 
         void GraphicsManager::draw()
         {
+            static unsigned long framecount = 0;
+            static auto time1 = vsg::clock::now();
+            ++framecount;
+
+            auto time2 = vsg::clock::now();
+            double td = std::chrono::duration<double, std::chrono::milliseconds::period>(time2 - time1).count();
+            if(td > 40)
+            {
+                if(showFPS_.bValue)
+                {
+                    auto mainWindow = windows.find(1);
+                    if(mainWindow != windows.end())
+                    {
+                        const int width = mainWindow->second->window->width();
+                        const int height = mainWindow->second->window->height();
+                        const double ratio = static_cast<double>(width) / static_cast<double>(height);
+                        const double top = 0.5;
+                        const double left = -0.52*ratio;
+                        fpsLayout->position = vsg::vec3(0.0, left, top);
+                    }
+
+                    int fps = framecount*1000./td;
+                    fpsText->value() = vsg::make_string("fps: ", fps);
+                    auto options = GuiHelper::getOrCreateOptions();
+                    fpsNode->setup(0, options);
+                }
+                time1 = time2;
+                framecount = 0;
+            }
+
             // todo: remove draw handling via nsview
             for(auto& graphicsUpdateObject: graphicsUpdateObjects)
             {
@@ -569,7 +685,36 @@ namespace mars
                     {
                         hideCoords();
                     }
-                    viewer->compile();
+                }
+            }
+            else if(_property.paramId == showGrid_.paramId)
+            {
+                if(showGrid_.bValue != _property.bValue)
+                {
+                    showGrid_.bValue = _property.bValue;
+                    if(showGrid_.bValue)
+                    {
+                        showGrid();
+                    }
+                    else
+                    {
+                        hideGrid();
+                    }
+                }
+            }
+            else if(_property.paramId == showFPS_.paramId)
+            {
+                if(showFPS_.bValue != _property.bValue)
+                {
+                    showFPS_.bValue = _property.bValue;
+                    if(showFPS_.bValue)
+                    {
+                        showFPS();
+                    }
+                    else
+                    {
+                        hideFPS();
+                    }
                 }
             }
         }
@@ -610,6 +755,10 @@ namespace mars
             GuiHelper::resourcePath = resourcesPath.sValue;
             showCoords_ = cfg->getOrCreateProperty("Graphics", "showCoords",
                                                    true, this);
+            showGrid_ = cfg->getOrCreateProperty("Graphics", "showGrid",
+                                                   true, this);
+            showFPS_ = cfg->getOrCreateProperty("Graphics", "showFPS",
+                                                   false, this);
         }
 
     } // end of namespace vsg_graphics

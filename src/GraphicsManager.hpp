@@ -99,6 +99,9 @@ namespace mars
             virtual void showClouds() override;
             virtual void hideClouds() override;
 
+            void showFPS();
+            void hideFPS();
+
             virtual void preview(int action, bool resize,
                                  const std::vector<interfaces::NodeData> &allNodes,
                                  unsigned int num = 0,
@@ -231,11 +234,16 @@ namespace mars
 
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
+            vsg::ref_ptr<vsg::Group> contentGroup;
 
         private:
             interfaces::GraphicData graphicOptions;
             //vsg::ref_ptr<vsg::Viewer> viewer;
             vsg::ref_ptr<vsg::Node> coords;
+            vsg::ref_ptr<vsg::Node> grid;
+            vsg::ref_ptr<vsg::Text> fpsNode;
+            vsg::ref_ptr<vsg::stringValue> fpsText;
+            vsg::ref_ptr<vsg::StandardLayout> fpsLayout;
             unsigned long long nextDrawID, nextWindowID;
             std::map<unsigned long long, DrawObject*> drawObjects;
             std::map<unsigned long long, GraphicsWidget*> windows;
@@ -247,7 +255,7 @@ namespace mars
 
             // cfg_manager stuff
             cfg_manager::CFGManagerInterface *cfg;
-            cfg_manager::cfgPropertyStruct resourcesPath, showCoords_;
+            cfg_manager::cfgPropertyStruct resourcesPath, showCoords_, showGrid_, showFPS_;
             std::vector<cfg_manager::cfgPropertyStruct*> cfgProperties;
             void setupCFG(void);
 
