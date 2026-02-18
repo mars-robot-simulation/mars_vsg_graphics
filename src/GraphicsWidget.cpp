@@ -229,7 +229,7 @@ namespace mars
             this->scene = scene;
             //view = new osgViewer::View;
             name = "3D View";
-            clearColor = {0.2, 0.2, 0.7, 1.0};
+            clearColor = {0.2, 0.2, 0.2, 1.0};
         }
 
         GraphicsWidget::~GraphicsWidget()
