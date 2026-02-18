@@ -14,7 +14,7 @@ namespace mars
     {
 
         vsg::ref_ptr<WorldTransformUniformValue> GuiHelper::worldTransformUniform = 0;
-        vsg::ref_ptr<vsg::Options> GuiHelper::loadOptions = nullptr;
+        vsg::ref_ptr<vsg::Options> GuiHelper::options = nullptr;
         std::map<std::string, GraphShader> GuiHelper::graphShaderFiles;
         std::map<std::string, vsg::ref_ptr<vsg::Node>> GuiHelper::nodeFiles;
         std::map<std::string, vsg::ref_ptr<vsg::DescriptorImage>> GuiHelper::textureFiles;
@@ -73,6 +73,20 @@ namespace mars
             return vsg::vec4(v.x(), v.y(), v.z(), w);
         }
 
+        vsg::ref_ptr<vsg::Options> GuiHelper::getOrCreateOptions()
+        {
+            if(!GuiHelper::options)
+            {
+                GuiHelper::options = vsg::Options::create(vsgXchange::all::create());
+                // todo: learn the shared concept of vsg, it looks like it provides
+                //       the same functionality as our nodeFiles from MARS1
+                GuiHelper::options->sharedObjects = vsg::SharedObjects::create();
+                GuiHelper::options->add(vsgXchange::all::create());
+                //options->setValue("two_sided", true);
+            }
+            return GuiHelper::options;
+        }
+
         GuiHelper::GuiHelper(interfaces::GraphicsManagerInterface *gi) : graphicsInterface(gi)
         {
             (void)this->graphicsInterface;
@@ -82,7 +96,7 @@ namespace mars
         {
             GuiHelper::worldTransformUniform = 0;
             GuiHelper::stateGroupNodes = 0;
-            GuiHelper::loadOptions = 0;
+            GuiHelper::options = 0;
             graphShaderFiles.clear();
             stateGroups.clear();
             nodeFiles.clear();
@@ -145,15 +159,7 @@ namespace mars
                 return node;
             }
 
-            if(!loadOptions)
-            {
-                loadOptions = vsg::Options::create(vsgXchange::all::create());
-                // todo: learn the shared concept of vsg, it looks like it provides
-                //       the same functionality as our nodeFiles from MARS1
-                loadOptions->sharedObjects = vsg::SharedObjects::create();
-                loadOptions->add(vsgXchange::all::create());
-                loadOptions->setValue("two_sided", true);
-            }
+            auto loadOptions = getOrCreateOptions();
             node = vsg::read_cast<vsg::Node>(fileName, loadOptions);
             nodeFiles[fileName] = node;
 
@@ -182,15 +188,7 @@ namespace mars
                     return it->second;
                 }
             }
-            if(!loadOptions)
-            {
-                loadOptions = vsg::Options::create(vsgXchange::all::create());
-                // todo: learn the shared concept of vsg, it looks like it provides
-                //       the same functionality as our nodeFiles from MARS1
-                loadOptions->sharedObjects = vsg::SharedObjects::create();
-                loadOptions->add(vsgXchange::all::create());
-                loadOptions->setValue("two_sided", true);
-            }
+            auto loadOptions = getOrCreateOptions();
             auto imageData = vsg::read_cast<vsg::Data>(filename, loadOptions);
             if(!imageData)
             {

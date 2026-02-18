@@ -107,10 +107,11 @@ namespace mars
 
             static vsg::ref_ptr<WorldTransformUniformValue> worldTransformUniform;
             static vsg::ref_ptr<vsg::Group> stateGroupNodes;
+            static vsg::ref_ptr<vsg::Options> options;
+            static vsg::ref_ptr<vsg::Options> getOrCreateOptions();
 
         private:
             interfaces::GraphicsManagerInterface *graphicsInterface;
-            static vsg::ref_ptr<vsg::Options> loadOptions;
 
             // map to prevent double load of shader files
             static std::map<std::string, GraphShader> graphShaderFiles;
