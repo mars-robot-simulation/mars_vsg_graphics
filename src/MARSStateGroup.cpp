@@ -132,7 +132,7 @@ namespace mars
                 VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0}}; // vsg_TexCoord0
 
             auto rasterState = vsg::RasterizationState::create();
-            rasterState->cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_BACK_BIT;
+            rasterState->cullMode = VK_CULL_MODE_BACK_BIT;
 
             auto depthState = vsg::DepthStencilState::create();
             depthState->depthTestEnable = VK_TRUE;
