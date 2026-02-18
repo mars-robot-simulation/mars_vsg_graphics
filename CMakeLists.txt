@@ -70,6 +70,7 @@ set(HEADERS
            src/shader/ShaderTypes.hpp
            src/gui_helper_functions.hpp
            src/MARSStateGroup.hpp
+           src/Grid.hpp
            src/Bobj.hpp
            src/tsort/tsort.h
 )
@@ -85,6 +86,7 @@ set(SOURCES
            src/shader/ShaderTypes.cpp
            src/gui_helper_functions.cpp
            src/MARSStateGroup.cpp
+           src/Grid.cpp
            src/Bobj.cpp
            src/tsort/tsort.cpp
 )
