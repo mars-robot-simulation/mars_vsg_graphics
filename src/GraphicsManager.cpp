@@ -28,6 +28,11 @@ namespace mars
         {
             if(cfg)
             {
+                auto configPath = cfg->getOrCreateProperty("Config", "config_path",
+                                                           std::string{"."});
+                std::string saveFile = configPath.sValue;
+                saveFile.append("/mars_Graphics.yaml");
+                cfg->writeConfig(saveFile.c_str(), "Graphics");
                 libManager->releaseLibrary("cfg_manager");
             }
             for(auto it: drawObjects)
@@ -580,6 +585,13 @@ namespace mars
 
         void GraphicsManager::setupCFG(void)
         {
+            auto configPath = cfg->getOrCreateProperty("Config", "config_path",
+                                                       std::string{"."});
+
+            auto loadFile = configPath.sValue;
+            loadFile.append("/mars_Graphics.yaml");
+            cfg->loadConfig(loadFile.c_str());
+
             resourcesPath.propertyType = cfg_manager::stringProperty;
             resourcesPath.propertyIndex = 0;
             cfgProperties.push_back(&resourcesPath);
