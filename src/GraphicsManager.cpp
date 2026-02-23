@@ -644,7 +644,13 @@ namespace mars
             dirty = true;
         }
 
-        void GraphicsManager::removeOSGNode(void* node) {(void)node;}
+        void GraphicsManager::removeOSGNode(void* node)
+        {
+            vsg::ref_ptr<vsg::Node> n(static_cast<vsg::Node*>(node));
+            contentGroup->children.erase(std::find(contentGroup->children.begin(), contentGroup->children.end(), n));
+            dirty = true;
+        }
+
         unsigned long GraphicsManager::addHUDOSGNode(void* node) {(void)node;return 0;}
         bool GraphicsManager::isInitialized() const {return 0;}
         std::vector<interfaces::MaterialData> GraphicsManager::getMaterialList() const
