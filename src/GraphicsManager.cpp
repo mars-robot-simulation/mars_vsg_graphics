@@ -129,7 +129,7 @@ namespace mars
                 fpsLayout->outlineWidth = 0.1f;
                 fpsLayout->billboard = true;
 
-                fpsText = vsg::stringValue::create("fps: 0");
+                fpsText = vsg::stringValue::create("fps: 0\navg: 0");
 
                 fpsNode = vsg::Text::create();
                 fpsNode->technique = vsg::GpuLayoutTechnique::create();
@@ -554,12 +554,16 @@ namespace mars
         void GraphicsManager::draw()
         {
             static unsigned long framecount = 0;
+            static unsigned long framecount2 = 0;
             static auto time1 = vsg::clock::now();
+            static auto time2 = vsg::clock::now();
             ++framecount;
+            ++framecount2;
 
-            auto time2 = vsg::clock::now();
-            double td = std::chrono::duration<double, std::chrono::milliseconds::period>(time2 - time1).count();
-            if(td > 40)
+            auto now = vsg::clock::now();
+            double td = std::chrono::duration<double, std::chrono::milliseconds::period>(now - time1).count();
+            double td2 = std::chrono::duration<double, std::chrono::milliseconds::period>(now - time2).count();
+            if(td > 100)
             {
                 if(showFPS_.bValue)
                 {
@@ -575,13 +579,15 @@ namespace mars
                     }
 
                     int fps = framecount*1000./td;
-                    fpsText->value() = vsg::make_string("fps: ", fps);
+                    int fps2 = framecount2*1000./td2;
+                    fpsText->value() = vsg::make_string("fps: ", fps, "\navg: ", fps2);
                     auto options = GuiHelper::getOrCreateOptions();
                     fpsNode->setup(0, options);
                 }
-                time1 = time2;
+                time1 = now;
                 framecount = 0;
             }
+
 
             // todo: remove draw handling via nsview
             for(auto& graphicsUpdateObject: graphicsUpdateObjects)
