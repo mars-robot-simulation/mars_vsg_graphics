@@ -1,0 +1,5 @@
+params:
+  in:
+    texCoord: {index: 0, type: vec2}
+    color: {index: 2, type: vec4}
+source: graph_shader/image2DStore.frag

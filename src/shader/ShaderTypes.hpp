@@ -10,7 +10,7 @@ namespace mars
 
         struct ShaderAttributeT
         {
-            std::string type, name;
+            std::string type, name, format, flags;
             int set = -1;
             int binding = -1;
         };

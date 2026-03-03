@@ -7,10 +7,27 @@ namespace mars
 {
     namespace vsg_graphics
     {
-        class MARSStateGroup
+
+        struct TextureMapping
+        {
+            std::string name;
+            vsg::ref_ptr<vsg::Data> image;
+            vsg::ref_ptr<vsg::DescriptorImage> descriptor;
+            unsigned short binding = -1;
+            int usage = 0;
+            bool storage = false;
+            bool dst = false;
+            bool src = false;
+        };
+
+        class MARSStateGroup : public vsg::Inherit<vsg::StateGroup, MARSStateGroup>
         {
         public:
-            static vsg::ref_ptr<vsg::StateGroup> create(configmaps::ConfigMap material);
+            explicit MARSStateGroup(configmaps::ConfigMap material);
+            std::vector<vsg::ref_ptr<vsg::Commands>> captureCommands;
+            std::map<std::string, vsg::ref_ptr<vsg::Image>> captureImages;
+            std::map<std::string, vsg::ref_ptr<vsg::Image>> images;
+            std::string name;
         };
     }
 }

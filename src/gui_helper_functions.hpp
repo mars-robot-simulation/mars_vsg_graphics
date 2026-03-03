@@ -1,5 +1,6 @@
 #pragma once
 #include "shader/GraphShader.hpp"
+#include "MARSStateGroup.hpp"
 #include <vsg/all.h>
 #include <vsgXchange/all.h>
 
@@ -103,19 +104,20 @@ namespace mars
             static vsg::ref_ptr<vsg::DescriptorImage> loadTexture(std::string filename);
             static std::string resourcePath;
             static bool checkBobj(std::string &filename);
-            static vsg::ref_ptr<vsg::StateGroup> createStateGroup(configmaps::ConfigMap material);
+            static vsg::ref_ptr<MARSStateGroup> createStateGroup(configmaps::ConfigMap material);
 
             static vsg::ref_ptr<WorldTransformUniformValue> worldTransformUniform;
             static vsg::ref_ptr<vsg::Group> stateGroupNodes;
             static vsg::ref_ptr<vsg::Options> options;
+            static vsg::ref_ptr<vsg::Device> device;
             static vsg::ref_ptr<vsg::Options> getOrCreateOptions();
+            static std::map<std::string, vsg::ref_ptr<MARSStateGroup>> stateGroups;
 
         private:
             interfaces::GraphicsManagerInterface *graphicsInterface;
 
             // map to prevent double load of shader files
             static std::map<std::string, GraphShader> graphShaderFiles;
-            static std::map<std::string, vsg::ref_ptr<vsg::StateGroup>> stateGroups;
 
             // map to prevent double load of mesh files
             static std::map<std::string, vsg::ref_ptr<vsg::Node>> nodeFiles;

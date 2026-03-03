@@ -96,6 +96,7 @@ layout(set = 1, binding = 0) uniform LightData
             filterMap["vec3"] = 1;
             filterMap["vec4"] = 1;
             filterMap["sampler2D"] = 1;
+            filterMap["image2D"] = 1;
             filterMap["samplerCube"] = 1;
             filterMap["outColor"] = 1;
 
@@ -141,9 +142,19 @@ layout(set = 1, binding = 0) uniform LightData
                     //      if we want to be generic we might need a uniform-manager
                     if (type == "uniform")
                     {
+                        string format = "";
+                        if(nodeConfig[name].hasKey("format"))
+                        {
+                            format << nodeConfig[name]["format"];
+                        }
+                        string flags = "";
+                        if(nodeConfig[name].hasKey("flags"))
+                        {
+                            flags << nodeConfig[name]["flags"];
+                        }
                         if(!options.hasKey(name))
                         {
-                            uniforms[name] = ShaderUniformT{function, name};
+                            uniforms[name] = ShaderUniformT{function, name, format, flags};
                         }
                     } else if (type == "varying")
                     {
@@ -410,9 +421,19 @@ layout(set = 1, binding = 0) uniform LightData
                             s << "[" << num << "]";
                             name.append(s.str());
                         }
+                        std::string format = "";
+                        if(item.hasKey("format"))
+                        {
+                            format << item["format"];
+                        }
+                        std::string flags = "";
+                        if(item.hasKey("flags"))
+                        {
+                            flags << item["flags"];
+                        }
                         if(!options.hasKey(name))
                         {
-                            uniforms[name] = ShaderUniformT{type_name, name};
+                            uniforms[name] = ShaderUniformT{type_name, name, format, flags};
                         }
                     }
                 }
@@ -548,7 +569,17 @@ layout(set = 1, binding = 0) uniform LightData
                     continue;
                 }
                 // todo: deal with struct / class types of uniforms
-                code << "layout(set = " << u.second.set << ", binding = " << u.second.binding << ") uniform " << u.second.type << " " << u.second.name << ";" << std::endl;                
+                code << "layout(set = " << u.second.set << ", binding = " << u.second.binding;
+                if(u.second.format.size() > 0)
+                {
+                    code << ", " << u.second.format;
+                }
+                code << ") uniform ";
+                if(u.second.flags.size() > 0)
+                {
+                    code << " " << u.second.flags << " " ;
+                }
+                code << u.second.type << " " << u.second.name << ";" << std::endl;
             }
 
             return code.str();

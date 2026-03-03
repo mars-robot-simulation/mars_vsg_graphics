@@ -69,6 +69,7 @@ set(HEADERS
            src/shader/GraphShader.hpp
            src/shader/ShaderTypes.hpp
            src/gui_helper_functions.hpp
+           src/ImageUtils.hpp
            src/MARSStateGroup.hpp
            src/Grid.hpp
            src/Bobj.hpp
@@ -85,6 +86,7 @@ set(SOURCES
            src/shader/GraphShader.cpp
            src/shader/ShaderTypes.cpp
            src/gui_helper_functions.cpp
+           src/ImageUtils.cpp
            src/MARSStateGroup.cpp
            src/Grid.cpp
            src/Bobj.cpp

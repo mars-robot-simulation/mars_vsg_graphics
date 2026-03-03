@@ -4,3 +4,6 @@ params:
   out:
     viewPos: {index: 1, type: vec4}
 source: graph_shader/viewPos.vert
+varyings:
+  vec4:
+    - {name: viewPositionVarying}

@@ -14,7 +14,7 @@
 
 #define CULL_LAYER (1 << (widgetID-1))
 
-#include "vsgoffscreenshot.hpp"
+#include "ImageUtils.hpp"
 
 namespace mars
 {
@@ -257,7 +257,6 @@ namespace mars
                                         bool vsync)
         {
             (void) data;
-            (void) vsync;
 
             if(!gm)
             {
@@ -300,18 +299,16 @@ namespace mars
                 VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
 
                 // todo: add msaa handling
-                auto transferImageView = createTransferImageView(traits->device, offscreenImageFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
-                auto transferDepthImageView = createTransferImageView(traits->device, depthFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
-                captureImage = createCaptureImage(traits->device, offscreenImageFormat, targetExtent);
-                captureDepthImage = createCaptureImage(traits->device, depthFormat, targetExtent);
-                auto captureCommands = createTransferCommands(traits->device,
-                                                              transferImageView->image,
+                auto transferImageView = createTransferImageView(offscreenImageFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
+                auto transferDepthImageView = createTransferImageView(depthFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
+                captureImage = createCaptureImage(offscreenImageFormat, targetExtent);
+                captureDepthImage = createCaptureImage(depthFormat, targetExtent);
+                auto captureCommands = createTransferCommands(transferImageView->image,
                                                               captureImage);
-                auto captureDepthCommands = createTransferCommands(traits->device,
-                                                                   transferDepthImageView->image,
+                auto captureDepthCommands = createTransferCommands(transferDepthImageView->image,
                                                                    captureDepthImage);
                 auto renderGraph = vsg::RenderGraph::create();
-                renderGraph->framebuffer = createOffscreenFramebuffer(traits->device, transferImageView, transferDepthImageView, samples);
+                renderGraph->framebuffer = createOffscreenFramebuffer(transferImageView, transferDepthImageView, samples);
                 renderGraph->renderArea.extent = renderGraph->framebuffer->extent2D();
 
                 //auto renderGraph = createOffscreenRendergraph(*context, targetExtent);
@@ -322,9 +319,11 @@ namespace mars
                 auto view = vsg::View::create(graphicsCamera->camera);
                 view->viewDependentState = ViewDependentState::create(view);
                 renderGraph->addChild(view);
-                view->addChild(gm->rootNode);
+                contentGroup = vsg::Group::create();
+                contentGroup->addChild(gm->rootNode);
+                view->addChild(contentGroup);
 
-                auto commandGraph = vsg::CommandGraph::create(*(shared->window));
+                commandGraph = vsg::CommandGraph::create(*(shared->window));
                 commandGraph->submitOrder = -1; // render before the main_commandGraph
                 commandGraph->addChild(renderGraph);
                 // todo: integrate switch from vsgoffsreen example to allow defined framerate for capturing
@@ -349,6 +348,8 @@ namespace mars
                 }
                 // if this is the first window to be created, use its device for future window creation.
                 if (!traits->device) traits->device = window->windowAdapter->getOrCreateDevice();
+                GuiHelper::device = traits->device;
+
                 uint32_t width = window->traits->width;
                 uint32_t height = window->traits->height;
                 fprintf(stderr, "-------- with: %u\theight: %u\n", width, height);
@@ -361,14 +362,16 @@ namespace mars
                 auto view = vsg::View::create(graphicsCamera->camera);
                 // try to override view dependent state implementation
                 view->viewDependentState = ViewDependentState::create(view);
-                view->addChild(gm->rootNode);
+                contentGroup = vsg::Group::create();
+                contentGroup->addChild(gm->rootNode);
+                view->addChild(contentGroup);
 
                 // set up the render graph
                 auto renderGraph = vsg::RenderGraph::create(*window, view);
                 renderGraph->contents = VK_SUBPASS_CONTENTS_INLINE;
 
                 renderGraph->setClearValues(vsg::sRGB_to_linear(clearColor_));
-                auto commandGraph = vsg::CommandGraph::create(*window, renderGraph);
+                commandGraph = vsg::CommandGraph::create(*window, renderGraph);
                 //auto commandGraph = vsg::createCommandGraphForView(*window, camera, gm->rootNode);
 
                 //viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
@@ -475,7 +478,7 @@ namespace mars
                     LOG_ERROR("GraphcisWidget::getImageData heigt doesn't fit to image of framebuffer");
                     return;
                 }
-                auto imageData = ::getImageData(gm->viewer, traits->device, captureImage);
+                auto imageData = vsg_graphics::getImageData(gm->viewer, captureImage);
                 // in openscenegraph / mars_graphics images where flipped; to stay compatible we flip
                 // the image as well
                 char* destinationBuffer = (char*)imageData->dataPointer();
@@ -523,7 +526,7 @@ namespace mars
                 aspectRatio = graphicsCamera->perspective->aspectRatio;
                 Zn  = graphicsCamera->perspective->nearDistance;
                 Zf  = graphicsCamera->perspective->farDistance;
-                auto imageData = ::getImageData(gm->viewer, traits->device, captureDepthImage);
+                auto imageData = vsg_graphics::getImageData(gm->viewer, captureDepthImage);
                 int d = 0;
                 float *data2 = (float*)(imageData->dataPointer());
                 float di;
@@ -589,9 +592,9 @@ namespace mars
             if(isRTTWidget)
             {
                 LOG_ERROR("GraphicsWidget::writeRTTImage called");
-                auto imageData = ::getImageData(gm->viewer, traits->device, captureImage);
+                auto imageData = vsg_graphics::getImageData(gm->viewer, captureImage);
                 vsg::write(imageData, "color_image.vsgt");
-                imageData = ::getImageData(gm->viewer, traits->device, captureDepthImage);
+                imageData = vsg_graphics::getImageData(gm->viewer, captureDepthImage);
                 vsg::write(imageData, "depth_image.vsgt");
                 // cv::Mat image=cv::Mat(cv::Size(captureImage->extent.width, captureImage->extent.height),
                 //                       CV_8UC4, imageData->dataPointer(), cv::Mat::AUTO_STEP);
@@ -616,7 +619,7 @@ namespace mars
         bool GraphicsWidget::pick(const double x, const double y)
         {
             auto intersector = vsg::LineSegmentIntersector::create(*(graphicsCamera->camera), x, y);
-            gm->rootNode->accept(*intersector);
+            contentGroup->accept(*intersector);
             if (intersector->intersections.empty()) return false;
             // sort the intersections front to back
             auto intersection = intersector->intersections[0];

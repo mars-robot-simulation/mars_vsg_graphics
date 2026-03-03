@@ -167,10 +167,12 @@ namespace mars
             vsg::ref_ptr<vsg::WindowTraits> traits;
             vsgQt::Window *window;
             QWidget *container;
+            vsg::ref_ptr<vsg::CommandGraph> commandGraph;
             vsg::ref_ptr<vsg::ImageInfo> colorImageInfo, depthImageInfo;
             vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage;
             vsg::ref_ptr<vsg::RenderGraph> renderGraph;
             vsg::ref_ptr<vsg::Group> overlayGroup;
+            vsg::ref_ptr<vsg::Group> contentGroup;
             GraphicsCamera *graphicsCamera;
 
             // todo: implement setName which applies the name to the window if available

@@ -25,6 +25,12 @@ namespace mars
         class DrawObject;
         class GuiHelper;
 
+        struct ExternNode
+        {
+            vsg::ref_ptr<vsg::Node> node;
+            int windowMask;
+        };
+
         class GraphicsManager : public interfaces::GraphicsManagerInterface,
                                 public interfaces::GraphicsEventInterface,
                                 public cfg_manager::CFGClient,
@@ -207,6 +213,8 @@ namespace mars
             // be carful with this method, only add a valid pointer osg::Node*
             virtual void addOSGNode(void* node) override;
             virtual void removeOSGNode(void* node) override;
+            virtual void addGraphicsNode(void* node, int windowMask=std::numeric_limits<int>::max()) override;
+            virtual void removeGraphicsNode(void* node) override;
             virtual unsigned long addHUDOSGNode(void* node) override;
             virtual bool isInitialized() const override;
             virtual std::vector<interfaces::MaterialData> getMaterialList() const override;
@@ -232,6 +240,22 @@ namespace mars
             virtual void brushTest(mars::utils::Vector start, mars::utils::Vector end) override;
             virtual void brushTestThreaded(std::vector<utils::Vector> start_, std::vector<utils::Vector> end) override;
 
+            virtual void getTextureSize(std::string materialName,
+                                        std::string textureName,
+                                        int *w, int *h) override;
+            virtual void captureTextureData(std::string materialName,
+                                            std::string textureName,
+                                            char *buffer,
+                                            int w, int h) override;
+            virtual void getTextureData(std::string materialName,
+                                        std::string textureName,
+                                        char *buffer,
+                                        int w, int h) override;
+            virtual void setTextureData(std::string materialName,
+                                        std::string textureName,
+                                        char *buffer,
+                                        int w, int h) override;
+
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
             vsg::ref_ptr<vsg::Group> contentGroup;
@@ -247,6 +271,7 @@ namespace mars
             unsigned long long nextDrawID, nextWindowID;
             std::map<unsigned long long, DrawObject*> drawObjects;
             std::map<unsigned long long, GraphicsWidget*> windows;
+            std::vector<ExternNode> externNodes;
             GuiHelper *guiHelper;
             bool dirty;
 
@@ -256,6 +281,7 @@ namespace mars
             // cfg_manager stuff
             cfg_manager::CFGManagerInterface *cfg;
             cfg_manager::cfgPropertyStruct resourcesPath, showCoords_, showGrid_, showFPS_;
+            int coordsWindowMask, gridWindowMask;
             std::vector<cfg_manager::cfgPropertyStruct*> cfgProperties;
             void setupCFG(void);
 

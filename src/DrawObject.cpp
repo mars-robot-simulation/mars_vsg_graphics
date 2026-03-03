@@ -53,6 +53,8 @@ namespace mars
 
         DrawObject::DrawObject() : visible(true)
         {
+            maskSet = false;
+            appliedCaptureCommands = false;
             poseTransform = vsg::MatrixTransform::create(vsg::translate(vsg::dvec3(0, 0, 0)));
         }
 
@@ -66,7 +68,7 @@ namespace mars
             if(parent_) setParent(parent_);
 
             //fprintf(stderr, "createObject spec:\n%s\n", spec.toYamlString().c_str());
-
+            name << spec["name"];
             // todo: prefix material names by worlds?
             if(spec.hasKey("filePrefix"))
             {
@@ -76,12 +78,22 @@ namespace mars
                 }
                 //fprintf(stderr, "createObject spec:\n%s\n", spec.toYamlString().c_str());
             }
+            std::string materialName = name + ":" + (std::string)spec["material"]["name"];
+            spec["material"]["name"] = materialName;
             auto stateGroup = GuiHelper::createStateGroup(spec["material"]);
+            maskSet = false;
+
+            if(spec.hasKey("windowMask"))
+            {
+                mask = (int)spec["windowMask"];
+                maskSet = true;
+            }
 
             if(spec.hasKey("filename"))
             {
                 if(spec["filename"] == "PRIMITIVE")
                 {
+                    std::string type = spec["origname"];
                     vsg::GeometryInfo geomInfo;
                     vsg::StateInfo stateInfo;
                     // todo: check how culling is done in vsg
@@ -94,7 +106,6 @@ namespace mars
                     options->sharedObjects = vsg::SharedObjects::create();
                     auto builder = vsg::Builder::create();
                     builder->options = options;
-                    std::string type = spec["origname"];
                     if(type == "box")
                     {
                         geomInfo.dx.set((double)spec["extend"]["x"], 0, 0);
@@ -118,13 +129,16 @@ namespace mars
                     }
                     if(drawObject.cast<vsg::StateGroup>())
                     {
-                        //LOG_ERROR("have stateGroup");
                         drawObject = drawObject.cast<vsg::StateGroup>()->children[0];
                     }
                 }
                 else
                 {
                     std::string filename = spec["filename"];
+                    if(spec.hasKey("filePrefix"))
+                    {
+                        filename = utils::pathJoin((std::string)spec["filePrefix"], filename);
+                    }
                     if(GuiHelper::checkBobj(filename))
                     {
                         drawObject = GuiHelper::readBobjFromFile(filename);
@@ -181,13 +195,19 @@ namespace mars
                     //     parent->addChild(poseTransform);
                     // }
                     //vsg::write(root, "debug.vsgt");
+                } else
+                {
+                    LOG_ERROR("DrawObject %s: have no drawObject.", name.c_str());
                 }
+
             }
         }
 
         void DrawObject::setParent(vsg::ref_ptr<vsg::Group> parent_)
         {
-            this->parent = parent_;
+            // todo: this was used for chaining nodes not for masking
+            //       have to be reimplemented
+            //this->parent = parent_;
         }
 
         void DrawObject::setPosition(const utils::Vector &pos)
@@ -231,14 +251,20 @@ namespace mars
                     // }
                     if(!visible)
                     {
-                        auto it = std::find(materialStateGroup->children.begin(),
-                                            materialStateGroup->children.end(),
-                                            poseTransform);
-                        materialStateGroup->children.erase(it);
+                        for(auto parent: parents)
+                        {
+                            auto it = std::find(parent->children.begin(),
+                                                parent->children.end(),
+                                                materialStateGroup);
+                            parent->children.erase(it);
+                        }
                     }
                     else
                     {
-                        materialStateGroup->addChild(poseTransform);
+                        for(auto parent: parents)
+                        {
+                            parent->addChild(materialStateGroup);
+                        }
                     }
                 }
             }

@@ -4,6 +4,7 @@
 #include "DrawObject.hpp"
 #include "Grid.hpp"
 #include "config.h"
+#include "ImageUtils.hpp"
 #include <vsgXchange/all.h>
 #include <mars_utils/misc.h>
 
@@ -51,7 +52,6 @@ namespace mars
         void GraphicsManager::initializeOSG(void *data, bool createWindow)
         {
             (void)data;
-            (void)createWindow;
             if(!viewer) {
                 cfg = libManager->getLibraryAs<cfg_manager::CFGManagerInterface>("cfg_manager");
                 if(!cfg)
@@ -101,6 +101,7 @@ namespace mars
 
                 if(createWindow)
                 {
+                    LOG_ERROR("create new 3d window in initialize");
                     new3DWindow(0);
                 }
 
@@ -201,10 +202,43 @@ namespace mars
                 drawObject->name = snode.name;
                 drawObject->id = nextDrawID;
                 drawObjects[nextDrawID++] = drawObject;
+
+                for(auto &it: windows)
+                {
+                    int windowMask = (1 << (it.first-1));
+                    //LOG_ERROR("windowMask: %d, drawObjectMask: %d (set: %d)", windowMask, drawObject->mask, drawObject->maskSet);
+                    if(drawObject->drawObject)
+                    {
+                        if(!drawObject->maskSet || (drawObject->maskSet && drawObject->mask & windowMask))
+                        {
+                            drawObject->parents.push_back(it.second->contentGroup);
+                            it.second->contentGroup->addChild(drawObject->materialStateGroup);
+                            //LOG_ERROR("DrawObject %s: add to window with id: %d.", drawObject->name.c_str(), it.first);
+                            if(!drawObject->materialStateGroup)
+                            {
+                                LOG_ERROR("DrawObject %s: have no materialStateGroup.", drawObject->name.c_str());
+                            }
+                            if(drawObject->materialStateGroup->captureCommands.size() > 0 && !drawObject->appliedCaptureCommands)
+                            {
+                                for(auto &it2: drawObject->materialStateGroup->captureCommands)
+                                {
+                                    it.second->commandGraph->addChild(it2);
+                                }
+                                drawObject->appliedCaptureCommands = true;
+                            }
+                        }
+                    } else
+                    {
+                        //LOG_ERROR("DrawObject %s: have no drawObejct.", drawObject->name.c_str());
+                    }
+                }
+
+                // todo: handle management of node / window mask
                 if(!activated)
                 {
                     drawObject->setVisible(false);
                 }
+
                 //vsg::visit<SetGlobalPipelineStates>(rootNode);
                 dirty = true;
                 return nextDrawID-1;
@@ -277,8 +311,17 @@ namespace mars
         {
             if(coords)
             {
-                rootNode->children.erase(std::find(rootNode->children.begin(), rootNode->children.end(), coords));
-                dirty = true;
+                // todo: this could be a util method removeNode()
+                for(auto &it: windows)
+                {
+                    auto &group = it.second->contentGroup;
+                    auto it2 = std::find(group->children.begin(), group->children.end(), coords);
+                    if(it2 != group->children.end())
+                    {
+                        group->children.erase(it2);
+                        dirty = true;
+                    }
+                }
             }
         }
 
@@ -339,8 +382,15 @@ namespace mars
             }
             if(coords)
             {
-                rootNode->children.insert(rootNode->children.begin(), coords);
-                dirty = true;
+                for(auto &it: windows)
+                {
+                    int windowMask = (1 << (it.first-1));
+                    if(coordsWindowMask & windowMask)
+                    {
+                        it.second->contentGroup->children.insert(it.second->contentGroup->children.begin(), coords);
+                        dirty = true;
+                    }
+                }
             }
         }
 
@@ -372,18 +422,32 @@ namespace mars
             }
             if(grid)
             {
-                rootNode->children.insert(rootNode->children.end(), grid);
-                dirty = true;
+                for(auto &it: windows)
+                {
+                    int windowMask = (1 << (it.first-1));
+                    if(gridWindowMask & windowMask)
+                    {
+                        it.second->contentGroup->children.insert(it.second->contentGroup->children.end(), grid);
+                        dirty = true;
+                    }
+                }
             }
-
         }
 
         void GraphicsManager::hideGrid(void)
         {
             if(grid)
             {
-                rootNode->children.erase(std::find(rootNode->children.begin(), rootNode->children.end(), grid));
-                dirty = true;
+                for(auto &it: windows)
+                {
+                    auto &group = it.second->contentGroup;
+                    auto it2 = std::find(group->children.begin(), group->children.end(), grid);
+                    if(it2 != group->children.end())
+                    {
+                        group->children.erase(it2);
+                        dirty = true;
+                    }
+                }
             }
         }
 
@@ -429,6 +493,48 @@ namespace mars
                 //GuiHelper::worldTransformUniform->value().projInverse = window->perspective->inverse();
                 //GuiHelper::worldTransformUniform->value().viewInverse = window->lookAt->inverse();
             }
+
+            // setup content
+            int windowMask = (1 << (nextWindowID-1));
+            for(auto &it: drawObjects)
+            {
+                auto &drawObject = it.second;
+                if(drawObject->drawObject)
+                {
+                    if(!drawObject->maskSet || (drawObject->maskSet && drawObject->mask & windowMask))
+                    {
+                        drawObject->parents.push_back(window->contentGroup);
+                        if(drawObject->visible)
+                        {
+                            window->contentGroup->addChild(drawObject->materialStateGroup);
+                        }
+                        if(drawObject->materialStateGroup->captureCommands.size() > 0 && !drawObject->appliedCaptureCommands)
+                        {
+                            for(auto &it2: drawObject->materialStateGroup->captureCommands)
+                            {
+                                window->commandGraph->addChild(it2);
+                            }
+                            drawObject->appliedCaptureCommands = true;
+                        }
+                    }
+                }
+            }
+            for(auto &it: externNodes)
+            {
+                if(it.windowMask & windowMask)
+                {
+                    window->contentGroup->addChild(it.node);
+                }
+            }
+            if(coords && showCoords_.bValue && coordsWindowMask & windowMask)
+            {
+                window->contentGroup->children.insert(window->contentGroup->children.begin(), coords);
+            }
+            if(grid && showGrid_.bValue && gridWindowMask & windowMask)
+            {
+                window->contentGroup->children.insert(window->contentGroup->children.end(), grid);
+            }
+
             dirty = true;
             return nextWindowID++;
         }
@@ -645,16 +751,53 @@ namespace mars
         // be carful with this method, only add a valid pointer osg::Node*
         void GraphicsManager::addOSGNode(void* node)
         {
-            vsg::ref_ptr<vsg::Node> n(static_cast<vsg::Node*>(node));
-            contentGroup->addChild(n);
-            dirty = true;
+            addGraphicsNode(node);
         }
 
         void GraphicsManager::removeOSGNode(void* node)
         {
+            removeGraphicsNode(node);
+        }
+
+        void GraphicsManager::addGraphicsNode(void* node, int windowMask)
+        {
+            ExternNode n{vsg::ref_ptr<vsg::Node>(static_cast<vsg::Node*>(node)), windowMask};
+            for(auto &it: windows)
+            {
+                int mask = (1 << (it.first-1));
+                if(mask & windowMask)
+                {
+                    it.second->contentGroup->addChild(n.node);
+                    dirty = true;
+                }
+            }
+            externNodes.push_back(n);
+        }
+
+        void GraphicsManager::removeGraphicsNode(void* node)
+        {
             vsg::ref_ptr<vsg::Node> n(static_cast<vsg::Node*>(node));
-            contentGroup->children.erase(std::find(contentGroup->children.begin(), contentGroup->children.end(), n));
-            dirty = true;
+            for(auto &it: windows)
+            {
+                auto &contentGroup = it.second->contentGroup;
+                auto it2 = std::find(contentGroup->children.begin(), contentGroup->children.end(), n);
+                if(it2 != contentGroup->children.end())
+                {
+                    contentGroup->children.erase(it2);
+                    dirty = true;
+                }
+            }
+            auto it = externNodes.begin();
+            while(it != externNodes.end())
+            {
+                if(it->node == n)
+                {
+                    externNodes.erase(it);
+                } else
+                {
+                    ++it;
+                }
+            }
         }
 
         unsigned long GraphicsManager::addHUDOSGNode(void* node) {(void)node;return 0;}
@@ -777,8 +920,169 @@ namespace mars
                                                    true, this);
             showFPS_ = cfg->getOrCreateProperty("Graphics", "showFPS",
                                                    false, this);
+            coordsWindowMask = cfg->getOrCreateProperty("Graphics", "coordsWindowMask",
+                                                        std::numeric_limits<int>::max(), this).iValue;
+            gridWindowMask = cfg->getOrCreateProperty("Graphics", "gridWindowMask",
+                                                      std::numeric_limits<int>::max(), this).iValue;
         }
 
+        void GraphicsManager::getTextureSize(std::string materialName,
+                                             std::string textureName,
+                                             int *w, int *h)
+        {
+            auto it = GuiHelper::stateGroups.find(materialName);
+            if(it != GuiHelper::stateGroups.end())
+            {
+                auto it2 = it->second->images.find(textureName);
+                if(it2 != it->second->images.end())
+                {
+                    *w = it2->second->extent.width;
+                    *h = it2->second->extent.height;
+                } else
+                {
+                    LOG_ERROR("GraphicsManager::getTextureSize texture: %s not found in list of:", textureName.c_str());
+                    for(auto &nameIt: it->second->images)
+                    {
+                        LOG_ERROR("GraphicsManager::getTextureSize  - %s", nameIt.first.c_str());
+                    }
+                }
+            } else
+            {
+                LOG_ERROR("GraphicsManager::getTextureSize mateial: %s not found in list of:", materialName.c_str());
+                for(auto &nameIt: GuiHelper::stateGroups)
+                {
+                    LOG_ERROR("GraphicsManager::getTextureSize  - %s", nameIt.first.c_str());
+                }
+            }
+        }
+
+        void GraphicsManager::captureTextureData(std::string materialName,
+                                                 std::string textureName,
+                                                 char *buffer,
+                                                 int w, int h)
+        {
+            auto it = GuiHelper::stateGroups.find(materialName);
+            if(it != GuiHelper::stateGroups.end())
+            {
+                auto it2 = it->second->captureImages.find(textureName);
+                if(it2 != it->second->captureImages.end())
+                {
+                    if(w != it2->second->extent.width)
+                    {
+                        LOG_ERROR("GraphicsManager::captureTextureData width %d doesn't match image width %d!", w, it2->second->extent.width);
+                        return;
+                    }
+                    if(h != it2->second->extent.height)
+                    {
+                        LOG_ERROR("GraphicsManager::captureTextureData height %d doesn't match image height %d!", h, it2->second->extent.height);
+                        return;
+                    }
+
+                    auto imageData = vsg_graphics::getImageData(viewer, it2->second);
+                    char* srcBuffer = (char*)imageData->dataPointer();
+                    memcpy(buffer, srcBuffer, h*w*4);
+                } else
+                {
+                    LOG_ERROR("GraphicsManager::captureTextureData texture: %s not found in list of:", textureName.c_str());
+                    for(auto &nameIt: it->second->captureImages)
+                    {
+                        LOG_ERROR("GraphicsManager::captureTextureData  - %s", nameIt.first.c_str());
+                    }
+                }
+            } else
+            {
+                LOG_ERROR("GraphicsManager::captureTextureData mateial: %s not found in list of:", materialName.c_str());
+                for(auto &nameIt: GuiHelper::stateGroups)
+                {
+                    LOG_ERROR("GraphicsManager::captureTextureData  - %s", nameIt.first.c_str());
+                }
+            }
+        }
+
+        void GraphicsManager::getTextureData(std::string materialName,
+                                             std::string textureName,
+                                             char *buffer,
+                                             int w, int h)
+        {
+            auto it = GuiHelper::stateGroups.find(materialName);
+            if(it != GuiHelper::stateGroups.end())
+            {
+                auto it2 = it->second->images.find(textureName);
+                if(it2 != it->second->images.end())
+                {
+                    if(w != it2->second->extent.width)
+                    {
+                        LOG_ERROR("GraphicsManager::getTextureData width %d doesn't match image width %d!", w, it2->second->extent.width);
+                        return;
+                    }
+                    if(h != it2->second->extent.height)
+                    {
+                        LOG_ERROR("GraphicsManager::getTextureData height %d doesn't match image height %d!", h, it2->second->extent.height);
+                        return;
+                    }
+
+                    char* srcBuffer = (char*)it2->second->data->dataPointer();
+                    memcpy(buffer, srcBuffer, h*w*4);
+                } else
+                {
+                    LOG_ERROR("GraphicsManager::getTextureData texture: %s not found in list of:", textureName.c_str());
+                    for(auto &nameIt: it->second->images)
+                    {
+                        LOG_ERROR("GraphicsManager::getTextureData  - %s", nameIt.first.c_str());
+                    }
+                }
+            } else
+            {
+                LOG_ERROR("GraphicsManager::getTextureData mateial: %s not found in list of:", materialName.c_str());
+                for(auto &nameIt: GuiHelper::stateGroups)
+                {
+                    LOG_ERROR("GraphicsManager::getTextureData  - %s", nameIt.first.c_str());
+                }
+            }
+        }
+
+        void GraphicsManager::setTextureData(std::string materialName,
+                                             std::string textureName,
+                                             char *buffer,
+                                             int w, int h)
+        {
+            auto it = GuiHelper::stateGroups.find(materialName);
+            if(it != GuiHelper::stateGroups.end())
+            {
+                auto it2 = it->second->images.find(textureName);
+                if(it2 != it->second->images.end())
+                {
+                    if(w != it2->second->extent.width)
+                    {
+                        LOG_ERROR("GraphicsManager::setTextureData width %d doesn't match image width %d!", w, it2->second->extent.width);
+                        return;
+                    }
+                    if(h != it2->second->extent.height)
+                    {
+                        LOG_ERROR("GraphicsManager::setTextureData height %d doesn't match image height %d!", h, it2->second->extent.height);
+                        return;
+                    }
+                    char* dstBuffer = (char*)it2->second->data->dataPointer();
+                    memcpy(dstBuffer, buffer, h*w*4);
+                    it2->second->data->dirty();
+                } else
+                {
+                    LOG_ERROR("GraphicsManager::setTextureData texture: %s not found in list of:", textureName.c_str());
+                    for(auto &nameIt: it->second->images)
+                    {
+                        LOG_ERROR("GraphicsManager::setTextureData  - %s", nameIt.first.c_str());
+                    }
+                }
+
+            } else
+            {
+                LOG_ERROR("GraphicsManager::setTextureData mateial: %s not found in list of:", materialName.c_str());
+                for(auto &nameIt: GuiHelper::stateGroups)
+                {
+                    LOG_ERROR("GraphicsManager::setTextureData  - %s", nameIt.first.c_str());
+                }
+            }
+        }
     } // end of namespace vsg_graphics
 } // end of namespace mars
 

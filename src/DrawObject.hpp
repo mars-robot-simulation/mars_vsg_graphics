@@ -30,16 +30,19 @@ namespace mars
 
             std::string name;
             unsigned long id;
+            vsg::ref_ptr<MARSStateGroup> materialStateGroup;
+            std::vector<vsg::ref_ptr<vsg::Group>> parents;
+            vsg::ref_ptr<vsg::Node> drawObject;
+            int mask;
+            bool maskSet;
+            bool appliedCaptureCommands;
+            bool visible;
 
         private:
             vsg::ref_ptr<vsg::MatrixTransform> poseTransform;
             vsg::ref_ptr<vsg::MatrixTransform> scaleTransform;
-            vsg::ref_ptr<vsg::Node> drawObject;
-            vsg::ref_ptr<vsg::Group> parent;
-            vsg::ref_ptr<vsg::StateGroup> materialStateGroup;
             utils::Vector position;
             utils::Quaternion quaternion;
-            bool visible;
 
             void applyTransform();
         };

@@ -15,11 +15,12 @@ namespace mars
 
         vsg::ref_ptr<WorldTransformUniformValue> GuiHelper::worldTransformUniform = 0;
         vsg::ref_ptr<vsg::Options> GuiHelper::options = nullptr;
+        vsg::ref_ptr<vsg::Device> GuiHelper::device = nullptr;
         std::map<std::string, GraphShader> GuiHelper::graphShaderFiles;
         std::map<std::string, vsg::ref_ptr<vsg::Node>> GuiHelper::nodeFiles;
         std::map<std::string, vsg::ref_ptr<vsg::DescriptorImage>> GuiHelper::textureFiles;
         std::map<std::string, vsg::ref_ptr<vsg::Data>> GuiHelper::imageFiles;
-        std::map<std::string, vsg::ref_ptr<vsg::StateGroup>> GuiHelper::stateGroups;
+        std::map<std::string, vsg::ref_ptr<MARSStateGroup>> GuiHelper::stateGroups;
         vsg::ref_ptr<vsg::Group> GuiHelper::stateGroupNodes = vsg::StateGroup::create();
         std::string GuiHelper::resourcePath = "";
 
@@ -195,6 +196,8 @@ namespace mars
                 LOG_ERROR("GuiHelper:: can't load image file: %s", filename.c_str());
                 return nullptr;
             }
+            vsg::ref_ptr<vsg::Image> image = vsg::Image::create(imageData);
+            LOG_ERROR("load image %s with format %d\n", filename.c_str(), imageData->properties.format);            
             imageFiles[filename] = imageData;
             return imageData;
         }
@@ -229,18 +232,18 @@ namespace mars
             return Bobj::checkBobj(filename);
         }
 
-        vsg::ref_ptr<vsg::StateGroup> GuiHelper::createStateGroup(configmaps::ConfigMap materialSpec)
+        vsg::ref_ptr<MARSStateGroup> GuiHelper::createStateGroup(configmaps::ConfigMap materialSpec)
         {
-            std::string materialName = materialSpec["name"];
-            { // check if we loaded the file already into memory
-                auto it = stateGroups.find(materialName);
-                if(it != stateGroups.end()) {
-                    return it->second;
-                }
-            }
+            // std::string materialName = materialSpec["name"];
+            // { // check if we loaded the file already into memory
+            //     auto it = stateGroups.find(materialName);
+            //     if(it != stateGroups.end()) {
+            //         return it->second;
+            //     }
+            // }
             auto stateGroup = MARSStateGroup::create(materialSpec);
-            stateGroupNodes->addChild(stateGroup);
-            stateGroups[materialName] = stateGroup;
+            //stateGroupNodes->addChild(stateGroup);
+            stateGroups[materialSpec["name"]] = stateGroup;
             return stateGroup;
         }
 
