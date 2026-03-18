@@ -251,7 +251,7 @@ namespace mars
             rendergraph->framebuffer = fbuf;
 
             rendergraph->clearValues.resize(2);
-            rendergraph->clearValues[0].color = vsg::sRGB_to_linear(0.4f, 0.2f, 0.4f, 1.0f);
+            rendergraph->clearValues[0].color = vsg::sRGB_to_linear(1.0f, 0.0f, 0.0f, 1.0f);
             rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
 
             return rendergraph;
@@ -345,7 +345,7 @@ namespace mars
                     return;
                 }
 
-                LOG_ERROR("GraphicsWidget create RTT window.");
+                LOG_ERROR("GraphicsWidget create RTT window. (%d, %d)", width, height);
 
                 graphicsCamera = new GraphicsCamera(width, height);
                 VkExtent2D targetExtent{(unsigned int)width, (unsigned int)height};
@@ -365,7 +365,10 @@ namespace mars
                                                                    captureDepthImage);
                 auto renderGraph = vsg::RenderGraph::create();
                 renderGraph->framebuffer = createOffscreenFramebuffer(transferImageView, transferDepthImageView, samples);
+
+                renderGraph->renderArea.offset = {0, 0};
                 renderGraph->renderArea.extent = renderGraph->framebuffer->extent2D();
+                renderGraph->viewportState->set(0, 0, width, height);
 
                 //auto renderGraph = createOffscreenRendergraph(*context, targetExtent);
                 // Vulkan default depth buffer should be cleared with 1.0, somehow with vsg we have to clear it with 0.0
@@ -380,7 +383,7 @@ namespace mars
                 view->addChild(contentGroup);
 
                 commandGraph = vsg::CommandGraph::create(*(shared->window));
-                commandGraph->submitOrder = -1; // render before the main_commandGraph
+                commandGraph->submitOrder = -widgetID; // render before the main_commandGraph
                 commandGraph->addChild(renderGraph);
                 // todo: integrate switch from vsgoffsreen example to allow defined framerate for capturing
                 commandGraph->addChild(captureCommands);

@@ -107,15 +107,19 @@ namespace mars
                         }
                         if(tm.dst)
                         {
-                            image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                            //image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                            image->usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                            //image->layout = VK_IMAGE_LAYOUT_GENERAL;
                             //image->tiling = VK_IMAGE_TILING_OPTIMAL;
-                            //image->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                            image->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
                         }
                         if(tm.src)
                         {
-                            image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+                            image->usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+                            //image->layout = VK_IMAGE_LAYOUT_GENERAL;
+                            //image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
                             //image->tiling = VK_IMAGE_TILING_OPTIMAL;
-                            //image->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                            image->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
                         }
 
                         auto imageView = vsg::ImageView::create(image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -131,13 +135,24 @@ namespace mars
 
                         if(it.hasKey("createReadCommand") && (bool)it["createReadCommand"] == true)
                         {
-                            //LOG_ERROR("createReadCommand for %s with size: %d %d", tm.name.c_str(), image->extent.width, image->extent.height);
+                            LOG_ERROR("createReadCommand for %s with size: %d %d", tm.name.c_str(), image->extent.width, image->extent.height);
                             VkExtent2D targetExtent{image->extent.width, image->extent.height};
                             auto captureImage = createCaptureImage(VK_FORMAT_B8G8R8A8_SRGB, targetExtent);
                             captureImages[tm.name] = captureImage;
                             auto commands = createTransferCommands(image,
                                                                    captureImage);
                             captureCommands.push_back(commands);
+                        }
+                        if(it.hasKey("transfereTo"))
+                        {
+                            auto targetImageIt = images.find(it["transfereTo"]);
+                            if(targetImageIt != images.end())
+                            {
+                                //LOG_ERROR("createReadCommand for %s with size: %d %d", tm.name.c_str(), image->extent.width, image->extent.height);
+                                auto commands = createTransferCommandsI(image,
+                                                                       targetImageIt->second);
+                                captureCommands.push_back(commands);
+                            }
                         }
                     } else
                     {

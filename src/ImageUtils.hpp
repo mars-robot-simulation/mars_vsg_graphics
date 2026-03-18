@@ -15,6 +15,8 @@ namespace mars
                                                              VkSampleCountFlagBits samples);
         vsg::ref_ptr<vsg::Commands> createTransferCommands(vsg::ref_ptr<vsg::Image> sourceImage,
                                                            vsg::ref_ptr<vsg::Image> destinationImage);
+        vsg::ref_ptr<vsg::Commands> createTransferCommandsI(vsg::ref_ptr<vsg::Image> sourceImage,
+                                                            vsg::ref_ptr<vsg::Image> destinationImage);
         vsg::ref_ptr<vsg::RenderPass> createTransferRenderPass(VkFormat imageFormat,
                                                                VkFormat depthFormat,
                                                                bool requiresDepthRead);

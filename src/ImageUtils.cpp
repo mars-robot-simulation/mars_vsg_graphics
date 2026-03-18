@@ -204,6 +204,117 @@ namespace mars
             return commands;
         }
 
+        vsg::ref_ptr<vsg::Commands> createTransferCommandsI(
+            vsg::ref_ptr<vsg::Image> sourceImage,
+            vsg::ref_ptr<vsg::Image> destinationImage)
+        {
+            auto commands = vsg::Commands::create();
+
+            // transition destinationImage to transfer destination initialLayout
+            auto transitionDestinationImageToDestinationLayoutBarrier = vsg::ImageMemoryBarrier::create(
+                0,                                                             // srcAccessMask
+                VK_ACCESS_TRANSFER_WRITE_BIT,                                  // dstAccessMask
+                VK_IMAGE_LAYOUT_UNDEFINED,                                     // oldLayout
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,                          // newLayout
+                VK_QUEUE_FAMILY_IGNORED,                                       // srcQueueFamilyIndex
+                VK_QUEUE_FAMILY_IGNORED,                                       // dstQueueFamilyIndex
+                destinationImage,                                              // image
+                VkImageSubresourceRange{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1} // subresourceRange
+                );
+
+            auto cmd_transitionForTransferBarrier = vsg::PipelineBarrier::create(
+                VK_PIPELINE_STAGE_TRANSFER_BIT,                      // srcStageMask
+                VK_PIPELINE_STAGE_TRANSFER_BIT,                      // dstStageMask
+                0,                                                   // dependencyFlags
+                transitionDestinationImageToDestinationLayoutBarrier // barrier
+                );
+
+            //commands->addChild(cmd_transitionForTransferBarrier);
+
+            if (
+                sourceImage->format == destinationImage->format && sourceImage->extent.width == destinationImage->extent.width && sourceImage->extent.height == destinationImage->extent.height)
+            {
+                // use vkCmdCopyImage
+                VkImageCopy region{};
+                region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.srcSubresource.layerCount = 1;
+                region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.dstSubresource.layerCount = 1;
+                region.extent = destinationImage->extent;
+
+                auto copyImage = vsg::CopyImage::create();
+                copyImage->srcImage = sourceImage;
+                copyImage->srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                copyImage->dstImage = destinationImage;
+                copyImage->dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                copyImage->regions.push_back(region);
+
+                commands->addChild(copyImage);
+            }
+            else if (supportsBlit(destinationImage->format))
+            {
+                // blit using vkCmdBlitImage
+                VkImageBlit region{};
+                region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.srcSubresource.layerCount = 1;
+                region.srcOffsets[0] = VkOffset3D{0, 0, 0};
+                region.srcOffsets[1] = VkOffset3D{
+                    static_cast<int32_t>(sourceImage->extent.width),
+                    static_cast<int32_t>(sourceImage->extent.height),
+                    1};
+                region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.dstSubresource.layerCount = 1;
+                region.dstOffsets[0] = VkOffset3D{0, 0, 0};
+                region.dstOffsets[1] = VkOffset3D{
+                    static_cast<int32_t>(destinationImage->extent.width),
+                    static_cast<int32_t>(destinationImage->extent.height),
+                    1};
+
+                auto blitImage = vsg::BlitImage::create();
+                blitImage->srcImage = sourceImage;
+                blitImage->srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                blitImage->dstImage = destinationImage;
+                blitImage->dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                blitImage->regions.push_back(region);
+                blitImage->filter = VK_FILTER_NEAREST;
+
+                commands->addChild(blitImage);
+            }
+            else
+            {
+                /// If the source and target extents and/or format are different
+                /// we would need to blit, however this device does not support it.
+                /// Options at this point include resizing or reformatting on the
+                /// CPU (using STBI for example) or using a sampler and rendering to
+                /// a texture in an additional pass.
+                throw std::runtime_error{"GPU does not support blit."};
+            }
+
+            // transition destination image from transfer destination layout
+            // to general layout to enable mapping to image DeviceMemory
+            auto transitionDestinationImageToMemoryReadBarrier = vsg::ImageMemoryBarrier::create(
+                VK_ACCESS_TRANSFER_WRITE_BIT,                                  // srcAccessMask
+                VK_ACCESS_MEMORY_READ_BIT,                                     // dstAccessMask
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,                          // oldLayout
+                VK_IMAGE_LAYOUT_GENERAL,                                       // newLayout
+                VK_QUEUE_FAMILY_IGNORED,                                       // srcQueueFamilyIndex
+                VK_QUEUE_FAMILY_IGNORED,                                       // dstQueueFamilyIndex
+                destinationImage,                                              // image
+                VkImageSubresourceRange{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1} // subresourceRange
+                );
+
+            auto cmd_transitionFromTransferBarrier = vsg::PipelineBarrier::create(
+                VK_PIPELINE_STAGE_TRANSFER_BIT,               // srcStageMask
+                VK_PIPELINE_STAGE_TRANSFER_BIT,               // dstStageMask
+                0,                                            // dependencyFlags
+                transitionDestinationImageToMemoryReadBarrier // barrier
+                );
+
+            //commands->addChild(cmd_transitionFromTransferBarrier);
+
+            return commands;
+        }
+
         vsg::ref_ptr<vsg::RenderPass> createTransferRenderPass(
             VkFormat imageFormat,
             VkFormat depthFormat,
@@ -356,11 +467,16 @@ namespace mars
             vsg::SubpassDependency dependency = {};
             dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
             dependency.dstSubpass = 0;
+            // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            // dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            // dependency.dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
             dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+            dependency.dependencyFlags = 0;
 
             vsg::SubpassDependency dependency2 = {};
             dependency2.srcSubpass = 0;
@@ -369,7 +485,7 @@ namespace mars
             dependency2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             dependency2.dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             dependency2.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            dependency2.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+            dependency2.dependencyFlags = 0;
 
             vsg::RenderPass::Dependencies dependencies{dependency, dependency2};
 
