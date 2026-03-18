@@ -1138,6 +1138,37 @@ namespace mars
             it->second->setScale(s);
         }
 
+        bool GraphicsManager::getIntersection(unsigned long windowID, const utils::Vector &start,
+                                              const utils::Vector &end, utils::Vector &pos)
+        {
+            auto wit = windows.find(windowID);
+            if(wit == windows.end())
+            {
+                LOG_ERROR("GraphicsManager::getIntersection window with id %lu not found!", windowID);
+                return false;
+            }
+            vsg::dvec3 s(start.x(), start.y(), start.z());
+            vsg::dvec3 e(end.x(), end.y(), end.z());
+            auto intersector = vsg::LineSegmentIntersector::create(s, e);
+            wit->second->contentGroup->accept(*intersector);
+            if (intersector->intersections.empty()) return false;
+            // sort the intersections front to back
+            auto intersection = intersector->intersections[0];
+            for(auto &it : intersector->intersections)
+            {
+                if(it->ratio < intersection->ratio)
+                {
+                    intersection = it;
+                }
+            }
+            pos.x() = intersection->worldIntersection.x;
+            pos.y() = intersection->worldIntersection.y;
+            pos.z() = intersection->worldIntersection.z;
+            return true;
+            //LOG_ERROR("found intersection at %g %g %g", intersection->worldIntersection.x, intersection->worldIntersection.y, intersection->worldIntersection.z);
+
+        }
+
     } // end of namespace vsg_graphics
 } // end of namespace mars
 
