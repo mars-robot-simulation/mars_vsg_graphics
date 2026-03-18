@@ -22,7 +22,7 @@ namespace mars
             : GraphicsManagerInterface(theManager), guiHelper{new GuiHelper{this}}
         {
             (void)QTWidget;
-            dirty = true;
+            dirty_ = true;
             vsg::Logger::instance()->level = vsg::Logger::LOGGER_INFO;
         }
 
@@ -193,6 +193,11 @@ namespace mars
         unsigned long GraphicsManager::addDrawObject(const NodeData &snode,
                                     bool activated)
         {
+            {
+                unsigned long id = getDrawID(snode.name);
+                if(id) return id;
+            }
+
             try {
                 NodeData nodeSpec = snode;
                 configmaps::ConfigMap spec;
@@ -240,7 +245,7 @@ namespace mars
                 }
 
                 //vsg::visit<SetGlobalPipelineStates>(rootNode);
-                dirty = true;
+                dirty_ = true;
                 return nextDrawID-1;
             } catch(std::exception &e)
             {
@@ -319,7 +324,7 @@ namespace mars
                     if(it2 != group->children.end())
                     {
                         group->children.erase(it2);
-                        dirty = true;
+                        dirty_ = true;
                     }
                 }
             }
@@ -349,7 +354,7 @@ namespace mars
             if(windows.find(1) != windows.end() && windows[1]->overlayGroup)
             {
                 windows[1]->overlayGroup->addChild(fpsNode);
-                dirty = true;
+                dirty_ = true;
             }
         }
 
@@ -359,7 +364,7 @@ namespace mars
             {
                 vsg::ref_ptr<vsg::Group> &node = windows[1]->overlayGroup;
                 node->children.erase(std::find(node->children.begin(), node->children.end(), fpsNode));
-                dirty = true;
+                dirty_ = true;
             }
         }
 
@@ -388,7 +393,7 @@ namespace mars
                     if(coordsWindowMask & windowMask)
                     {
                         it.second->contentGroup->children.insert(it.second->contentGroup->children.begin(), coords);
-                        dirty = true;
+                        dirty_ = true;
                     }
                 }
             }
@@ -428,7 +433,7 @@ namespace mars
                     if(gridWindowMask & windowMask)
                     {
                         it.second->contentGroup->children.insert(it.second->contentGroup->children.end(), grid);
-                        dirty = true;
+                        dirty_ = true;
                     }
                 }
             }
@@ -445,7 +450,7 @@ namespace mars
                     if(it2 != group->children.end())
                     {
                         group->children.erase(it2);
-                        dirty = true;
+                        dirty_ = true;
                     }
                 }
             }
@@ -487,13 +492,13 @@ namespace mars
 
             window->initialize(nullptr, shared, width, height);
             windows[nextWindowID] = window;
+
             if(!shared)
             {
                 // todo: solve this for each camera
                 //GuiHelper::worldTransformUniform->value().projInverse = window->perspective->inverse();
                 //GuiHelper::worldTransformUniform->value().viewInverse = window->lookAt->inverse();
             }
-
             // setup content
             int windowMask = (1 << (nextWindowID-1));
             for(auto &it: drawObjects)
@@ -535,7 +540,7 @@ namespace mars
                 window->contentGroup->children.insert(window->contentGroup->children.end(), grid);
             }
 
-            dirty = true;
+            dirty_ = true;
             return nextWindowID++;
         }
 
@@ -622,7 +627,7 @@ namespace mars
             {
                 it->second->setVisible(val);
             }
-            dirty = true;
+            dirty_ = true;
         }
 
         void GraphicsManager::setDrawObjectRBN(unsigned long id, int val) {(void)id; (void)val;}
@@ -712,10 +717,10 @@ namespace mars
             }
             // fprintf(stderr, ". ");
             // // pass any events into EventHandlers assigned to the Viewer
-            if(dirty)
+            if(dirty_)
             {
                 viewer->compile();
-                dirty = false;
+                dirty_ = false;
             }
             // could also try
             viewer->render();
@@ -768,7 +773,7 @@ namespace mars
                 if(mask & windowMask)
                 {
                     it.second->contentGroup->addChild(n.node);
-                    dirty = true;
+                    dirty_ = true;
                 }
             }
             externNodes.push_back(n);
@@ -784,7 +789,7 @@ namespace mars
                 if(it2 != contentGroup->children.end())
                 {
                     contentGroup->children.erase(it2);
-                    dirty = true;
+                    dirty_ = true;
                 }
             }
             auto it = externNodes.begin();
@@ -1136,6 +1141,12 @@ namespace mars
                 return;
             }
             it->second->setScale(s);
+        }
+
+        void GraphicsManager::dirty()
+        {
+            LOG_ERROR("dirty");
+            dirty_ = true;
         }
 
         bool GraphicsManager::getIntersection(unsigned long windowID, const utils::Vector &start,

@@ -266,6 +266,7 @@ namespace mars
             virtual void setManipulatorScale(std::string name,
                                             const utils::Vector &s) override;
 
+            virtual void dirty() override;
             virtual bool getIntersection(unsigned long windowID, const utils::Vector &p,
                                          const utils::Vector &dir, utils::Vector &pos) override;
 
@@ -286,7 +287,7 @@ namespace mars
             std::map<unsigned long long, GraphicsWidget*> windows;
             std::vector<ExternNode> externNodes;
             GuiHelper *guiHelper;
-            bool dirty;
+            bool dirty_;
             std::map<std::string, vsg::ref_ptr<Manipulator>> manipulators;
 
             // mars event handling
