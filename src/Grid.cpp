@@ -81,14 +81,14 @@ vec4 grid(vec3 pos) {
 
     if(abs(pos.x) < minimumx)
     {
-        color.x = 1.0;
-        color.y = 0.0;
+        color.x = 0.0;
+        color.y = 1.0;
         color.z = 0.0;
     }
     if(abs(pos.y) < minimumz)
     {
-        color.x = 0.0;
-        color.y = 1.0;
+        color.x = 1.0;
+        color.y = 0.0;
         color.z = 0.0;
     }
     return color;
