@@ -1083,6 +1083,61 @@ namespace mars
                 }
             }
         }
+
+        bool GraphicsManager::createManipulator(std::string name,
+                                                interfaces::ManipulatorClient *mc,
+                                                int windowMask)
+        {
+            if(manipulators.find(name) != manipulators.end())
+            {
+                LOG_ERROR("Manipulator with name %s already created!", name.c_str());
+                return false;
+            }
+            auto node = Manipulator::create(resourcesPath.sValue);
+            node->eventClient = mc;
+            node->mask = windowMask;
+            manipulators[name] = node;
+            for(auto &it: windows)
+            {
+                int mask = (1 << (it.first-1));
+                if(mask & windowMask)
+                {
+                    if(it.second->eventHandler)
+                    {
+                        it.second->contentGroup->addChild(node);
+                        //vsg::ref_ptr<InteractionHandler> g(node->cast<InteractionHandler>());
+                        it.second->eventHandler->interactionHandlers.push_back(node);
+                    }
+                }
+            }
+            return true;
+        }
+
+        void GraphicsManager::setManipulatorPose(std::string name,
+                                                 const utils::Vector &v,
+                                                 const utils::Quaternion &q)
+        {
+            auto it = manipulators.find(name);
+            if(it == manipulators.end())
+            {
+                LOG_ERROR("setPose: Manipulator %s not found!", name.c_str());
+                return;
+            }
+            it->second->setPose(v, q);
+        }
+
+        void GraphicsManager::setManipulatorScale(std::string name,
+                                                  const utils::Vector &s)
+        {
+            auto it = manipulators.find(name);
+            if(it == manipulators.end())
+            {
+                LOG_ERROR("setScale: Manipulator %s not found!", name.c_str());
+                return;
+            }
+            it->second->setScale(s);
+        }
+
     } // end of namespace vsg_graphics
 } // end of namespace mars
 

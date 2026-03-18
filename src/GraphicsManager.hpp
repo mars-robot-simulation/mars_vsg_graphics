@@ -2,6 +2,7 @@
 
 #include "gui_helper_functions.hpp"
 #include "GraphicsWidget.hpp"
+#include "Manipulator.hpp"
 
 #include <mars_interfaces/graphics/GraphicsManagerInterface.hpp>
 #include <mars_interfaces/graphics/GraphicsEventInterface.h>
@@ -256,6 +257,15 @@ namespace mars
                                         char *buffer,
                                         int w, int h) override;
 
+            virtual bool createManipulator(std::string name,
+                                           interfaces::ManipulatorClient *mc,
+                                           int windowMask = std::numeric_limits<int>::max()) override;
+            virtual void setManipulatorPose(std::string name,
+                                            const utils::Vector &v,
+                                            const utils::Quaternion &q) override;
+            virtual void setManipulatorScale(std::string name,
+                                            const utils::Vector &s) override;
+
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
             vsg::ref_ptr<vsg::Group> contentGroup;
@@ -274,6 +284,7 @@ namespace mars
             std::vector<ExternNode> externNodes;
             GuiHelper *guiHelper;
             bool dirty;
+            std::map<std::string, vsg::ref_ptr<Manipulator>> manipulators;
 
             // mars event handling
             std::list<interfaces::GraphicsUpdateInterface*> graphicsUpdateObjects;

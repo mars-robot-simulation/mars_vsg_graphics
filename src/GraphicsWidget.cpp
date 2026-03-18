@@ -30,25 +30,81 @@ namespace mars
         void EventHandler::apply(vsg::KeyPressEvent& keyPress)
         {
             //cout << "key press: " << keyPress.keyModifier << "\tkey: " << keyPress.keyBase << endl;
+            if(activeHandler)
+            {
+                bool active = true;
+                activeHandler->keyPressEvent(keyPress, active);
+                if(!active)
+                {
+                    activeHandler->setActive(false);
+                    activeHandler = nullptr;
+                }
+            }
         }
 
         void EventHandler::apply(vsg::ButtonPressEvent& event)
         {
             gw->mouseX = event.x;
             gw->mouseY = event.y;
+            bool handlerClick = false;
+            if(gw->pick(event.x, event.y))
+            {
+
+                //LOG_ERROR("test interactionHandlers");
+                for(auto &it: interactionHandlers)
+                {
+                    //LOG_ERROR("-------");
+                    if(it->haveInteraction(gw->pickNodePath))
+                    {
+                        if(activeHandler != it)
+                        {
+                            if(activeHandler)
+                            {
+                                activeHandler->setActive(false);
+                            }
+                            activeHandler = it;
+                            activeHandler->setActive(true);
+                        }
+                        handlerClick = true;
+                        break;
+                    }
+                }
+                if(!handlerClick && activeHandler)
+                {
+                    activeHandler->setActive(false);
+                    activeHandler = nullptr;
+                }
+            }
+            if(activeHandler)
+            {
+                activeHandler->pointerClickEvent(event.x, event.y);
+            }
         }
 
         void EventHandler::apply(vsg::ButtonReleaseEvent& event)
         {
-            if(gw->mouseX - event.x < 5 && gw->mouseY - event.y < 5)
+            //activeHandler = nullptr;
+            if(activeHandler)
             {
+                activeHandler->pointerReleaseEvent(event.x, event.y);
+            }
+            else if(gw->mouseX - event.x < 5 && gw->mouseY - event.y < 5)
+            {
+                // todo: apply selection
                 gw->pick(event.x, event.y);
             }
         }
 
-        void EventHandler::apply(vsg::PointerEvent& pointerEvent)
+        void EventHandler::apply(vsg::MoveEvent& moveEvent)
         {
-            //cout << "pointer: " << pointerEvent.x << " " << pointerEvent.y << endl;
+            if(activeHandler)
+            {
+                moveEvent.handled = activeHandler->pointerMoveEvent(moveEvent.x-gw->mouseX,
+                                                                    moveEvent.y-gw->mouseY);
+                gw->mouseX = moveEvent.x;
+                gw->mouseY = moveEvent.y;
+            }
+            //cout << "moveEvent: " << moveEvent.x << " " << moveEvent.y << endl;
         }
 
         vsg::ref_ptr<vsg::RenderGraph> GraphicsWidget::createOffscreenRendergraph(vsg::Context& context,
@@ -355,6 +411,11 @@ namespace mars
                 fprintf(stderr, "-------- with: %u\theight: %u\n", width, height);
 
                 graphicsCamera = new GraphicsCamera(width, height);
+
+                eventHandler = EventHandler::create();
+                eventHandler->gw = this;
+                gm->viewer->addEventHandler(eventHandler);
+
                 auto trackball = vsg::Trackball::create(graphicsCamera->camera);
                 trackball->addWindow(*window);
                 gm->viewer->addEventHandler(trackball);
@@ -380,9 +441,6 @@ namespace mars
                 container = QWidget::createWindowContainer(window, nullptr);
                 container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
                 container->setFocusPolicy(Qt::StrongFocus);
-                auto eventHandler = EventHandler::create();
-                eventHandler->gw = this;
-                gm->viewer->addEventHandler(eventHandler);
 
                 // for none rtt widgets we create an overlay view
                 overlayGroup = vsg::Group::create();
@@ -630,20 +688,21 @@ namespace mars
                     intersection = it;
                 }
             }
-            LOG_ERROR("found intersection at %g %g %g", intersection->worldIntersection.x, intersection->worldIntersection.y, intersection->worldIntersection.z);
+            //LOG_ERROR("found intersection at %g %g %g", intersection->worldIntersection.x, intersection->worldIntersection.y, intersection->worldIntersection.z);
             const vsg::MatrixTransform* transform;
 
-            for (auto node : intersection->nodePath)
-            {
-                transform = node->cast<vsg::MatrixTransform>();
-                if(transform)
-                {
-                    LOG_ERROR("... found transform");
-                    pickedObjects.push_back(transform);
-                    return true;
-                }
-            }
-
+            pickNodePath = intersection->nodePath;
+            // for (auto node : intersection->nodePath)
+            // {
+            //     transform = node->cast<vsg::MatrixTransform>();
+            //     if(transform)
+            //     {
+            //         LOG_ERROR("... found transform");
+            //         pickedObjects.push_back(transform);
+            //         return true;
+            //     }
+            // }
+            if(intersection->nodePath.size() > 0) return true;
             return false;
         }
 

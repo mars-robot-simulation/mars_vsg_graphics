@@ -26,14 +26,29 @@ namespace mars
         class GraphicsWidget;
         const unsigned int MASK_2D = 0xF0000000;
 
+        class InteractionHandler : public vsg::Inherit<vsg::Group, InteractionHandler>
+        {
+        public:
+            InteractionHandler() : Inherit() {}
+            virtual bool haveInteraction(std::vector<const vsg::Node*> &nodePath) {return false;}
+            virtual void keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active) {}
+            virtual bool pointerClickEvent(int x, int y) {return false;}
+            virtual bool pointerReleaseEvent(int x, int y) {return false;}
+            virtual bool pointerMoveEvent(int x, int y) {}
+            virtual void setActive(bool v) {}
+        };
+
         class EventHandler : public vsg::Inherit<vsg::Visitor, EventHandler>
         {
         public:
             GraphicsWidget *gw;
+            std::vector<InteractionHandler*> interactionHandlers;
+            InteractionHandler* activeHandler;
+
             void apply(vsg::KeyPressEvent& keyPress) override;
             void apply(vsg::ButtonPressEvent& buttonPressEvent) override;
             void apply(vsg::ButtonReleaseEvent& ButtonReleaseEvent) override;
-            void apply(vsg::PointerEvent& pointerEvent) override;
+            void apply(vsg::MoveEvent& moveEvent) override;
         };
 
         /**
@@ -174,6 +189,8 @@ namespace mars
             vsg::ref_ptr<vsg::Group> overlayGroup;
             vsg::ref_ptr<vsg::Group> contentGroup;
             GraphicsCamera *graphicsCamera;
+            std::vector<const vsg::Node*> pickNodePath;
+            vsg::ref_ptr<EventHandler> eventHandler;
 
             // todo: implement setName which applies the name to the window if available
             std::string name;

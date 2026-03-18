@@ -60,8 +60,8 @@ namespace mars
             ExtractMaterialVisitor emv;
             emv.makeDynamic = makeDynamic;
             node->accept(emv);
-            if (!emv.materialValue)
-                throw std::runtime_error("Failed finding the material value!");
+            // if (!emv.materialValue)
+            //     throw std::runtime_error("Failed finding the material value!");
             return emv.materialValue;
         }
 

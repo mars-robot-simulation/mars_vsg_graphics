@@ -72,6 +72,7 @@ set(HEADERS
            src/ImageUtils.hpp
            src/MARSStateGroup.hpp
            src/Grid.hpp
+           src/Manipulator.hpp
            src/Bobj.hpp
            src/tsort/tsort.h
 )
@@ -89,6 +90,7 @@ set(SOURCES
            src/ImageUtils.cpp
            src/MARSStateGroup.cpp
            src/Grid.cpp
+           src/Manipulator.cpp
            src/Bobj.cpp
            src/tsort/tsort.cpp
 )
