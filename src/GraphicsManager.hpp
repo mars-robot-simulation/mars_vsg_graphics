@@ -266,6 +266,9 @@ namespace mars
             virtual void setManipulatorScale(std::string name,
                                             const utils::Vector &s) override;
 
+            virtual bool getIntersection(unsigned long windowID, const utils::Vector &p,
+                                         const utils::Vector &dir, utils::Vector &pos) override;
+
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
             vsg::ref_ptr<vsg::Group> contentGroup;
