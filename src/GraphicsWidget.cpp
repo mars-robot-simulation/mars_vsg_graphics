@@ -330,8 +330,15 @@ namespace mars
                 traits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
             }
 
-            //traits->width = width;
-            //traits->height = height;
+            if(width > 0 && height > 0)
+            {
+                traits->width = width;
+                traits->height = height;
+            } else
+            {
+                traits->width = widgetWidth;
+                traits->height = widgetHeight;
+            }
             auto clearColor_ = vsg::vec4(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
             //auto clearColor = vsg::vec4(0.2f, 0.2f, 0.7f, 1.0f);
             // todo: evaluate msaa
