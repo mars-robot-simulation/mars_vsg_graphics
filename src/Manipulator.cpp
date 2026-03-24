@@ -86,6 +86,7 @@ namespace mars
             mode = 0;
             axis = -1;
             active = false;
+            direct = false;
             setColors();
         }
 
@@ -99,40 +100,49 @@ namespace mars
             {
                 if(node == x)
                 {
+                    mode = 1;
                     move = 1;
                     break;
                 }
                 if(node == y)
                 {
+                    mode = 1;
                     move = 2;
                     break;
                 }
                 if(node == z)
                 {
+                    mode = 1;
                     move = 3;
                     break;
                 }
                 if(node == rx)
                 {
-                    move = 4;
+                    mode = 2;
+                    move = 1;
                     break;
                 }
                 if(node == ry)
                 {
-                    move = 5;
+                    mode = 2;
+                    move = 2;
                     break;
                 }
                 if(node == rz)
                 {
-                    move = 6;
+                    mode = 2;
+                    move = 3;
                     break;
                 }
             }
             if(move > 0)
             {
+                direct = true;
                 if(!active)
                 {
                     move = 0;
+                    mode = 0;
+                    direct = false;
                 }
                 rejectMove = 0;
                 setColors();
@@ -145,12 +155,13 @@ namespace mars
         void Manipulator::keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active_)
         {
             //fprintf(stderr, "key press: %d", keyPress.keyBase);
+            if(direct) return;
+
             if(keyPress.keyBase == 'g')
             {
-                if(mode == 2 && move > 0)
+                if(mode != 1 && move > 0)
                 {
                     applyReject();
-                    move -= 3;
                 }
                 mode = 1;
                 keyPress.handled = true;
@@ -159,12 +170,22 @@ namespace mars
             }
             if(keyPress.keyBase == 'q')
             {
-                if(mode == 1 && move > 0)
+                if(mode != 2 && move > 0)
                 {
                     applyReject();
-                    move += 3;
                 }
                 mode = 2;
+                keyPress.handled = true;
+                setColors();
+                return;
+            }
+            if(keyPress.keyBase == 's')
+            {
+                if(mode != 3 && move > 0)
+                {
+                    applyReject();
+                }
+                mode = 3;
                 keyPress.handled = true;
                 setColors();
                 return;
@@ -176,39 +197,40 @@ namespace mars
                     applyReject();
                     move = 0;
                     mode = 0;
+                    direct = false;
                     keyPress.handled = true;
                     setColors();
                     return;
                 }
                 if(keyPress.keyBase == 'x')
                 {
-                    if(move != 1+(mode-1)*3)
+                    if(move != 1)
                     {
                         applyReject();
                     }
-                    move = 1+(mode-1)*3;
+                    move = 1;
                     keyPress.handled = true;
                     setColors();
                     return;
                 }
                 if(keyPress.keyBase == 'y')
                 {
-                    if(move != 2+(mode-1)*3)
+                    if(move != 2)
                     {
                         applyReject();
                     }
-                    move = 2+(mode-1)*3;
+                    move = 2;
                     keyPress.handled = true;
                     setColors();
                     return;
                 }
                 if(keyPress.keyBase == 'z')
                 {
-                    if(move != 3+(mode-1)*3)
+                    if(move != 3)
                     {
                         applyReject();
                     }
-                    move = 3+(mode-1)*3;
+                    move = 3;
                     keyPress.handled = true;
                     setColors();
                     return;
@@ -216,20 +238,10 @@ namespace mars
             }
             else if(keyPress.keyBase == vsg::KEY_Escape)
             {
-                if(move > 0)
-                {
-                    applyReject();
-                    move = 0;
-                    keyPress.handled = true;
-                    setColors();
-                    return;
-                } else
-                {
-                    active_ = false;
-                    keyPress.handled = true;
-                    setColors();
-                    return;
-                }
+                active_ = false;
+                keyPress.handled = true;
+                setColors();
+                return;
             }
             if(eventClient->keyPress(keyPress.keyBase))
             {
@@ -252,43 +264,68 @@ namespace mars
 
         bool Manipulator::pointerMoveEvent(int x, int y)
         {
-            if(move == 1)
+            if(mode == 1)
             {
-                rejectMove += -x;
-                eventClient->moveX(x);
-            } else if(move == 2)
+                if(move == 1)
+                {
+                    rejectMove += -x;
+                    eventClient->moveX(x);
+                } else if(move == 2)
+                {
+                    rejectMove += -x;
+                    eventClient->moveY(x);
+                } else if(move == 3)
+                {
+                    rejectMove += -x;
+                    eventClient->moveZ(x);
+                }
+            } else if(mode == 2)
             {
-                rejectMove += -x;
-                eventClient->moveY(x);
-            } else if(move == 3)
+                if(move == 1)
+                {
+                    rejectMove += -x;
+                    eventClient->rotX(x);
+                } else if(move == 2)
+                {
+                    rejectMove += -x;
+                    eventClient->rotY(x);
+                } else if(move == 3)
+                {
+                    rejectMove += -x;
+                    eventClient->rotZ(x);
+                }
+            } else if(mode == 3)
             {
-                rejectMove += -x;
-                eventClient->moveZ(x);
-            } else if(move == 4)
-            {
-                rejectMove += -x;
-                eventClient->rotX(x);
-            } else if(move == 5)
-            {
-                rejectMove += -x;
-                eventClient->rotY(x);
-            } else if(move == 6)
-            {
-                rejectMove += -x;
-                eventClient->rotZ(x);
+                if(move == 1)
+                {
+                    rejectMove += -x;
+                    eventClient->scaleX(x);
+                } else if(move == 2)
+                {
+                    rejectMove += -x;
+                    eventClient->scaleY(x);
+                } else if(move == 3)
+                {
+                    rejectMove += -x;
+                    eventClient->scaleZ(x);
+                }
             }
+
             return move != 0;
             //LOG_ERROR("pickMoveEvent %d: %4d %4d", move, x, y);
         }
 
         bool Manipulator::pointerReleaseEvent(int x, int y)
         {
-            if(mode == 0)
+            if(direct)
             {
+                direct = false;
+                mode = 0;
                 move = 0;
                 rejectMove = 0;
                 setColors();
             }
+            return false;
         }
 
         void Manipulator::setPose(const utils::Vector &v_,
@@ -321,6 +358,8 @@ namespace mars
             } else if(!v && active)
             {
                 active = false;
+                mode = move = 0;
+                direct = false;
                 scale /= 3.0;
                 setScale(scale);
             }
@@ -329,28 +368,46 @@ namespace mars
 
         void Manipulator::applyReject()
         {
-            if(rejectMove != 0 && move > 0)
+            if(rejectMove != 0 && mode > 0 && move > 0)
             {
                 int x = rejectMove;
-                if(move == 1)
+                if(mode == 1)
                 {
-                    eventClient->moveX(x);
-                } else if(move == 2)
-                {
-                    eventClient->moveY(x);
+                    if(move == 1)
+                    {
+                        eventClient->moveX(x);
+                    } else if(move == 2)
+                    {
+                        eventClient->moveY(x);
 
-                } else if(move == 3)
+                    } else if(move == 3)
+                    {
+                        eventClient->moveZ(x);
+                    }
+                } else if(mode == 2)
                 {
-                    eventClient->moveZ(x);
-                } else if(move == 4)
+                    if(move == 1)
+                    {
+                        eventClient->rotX(x);
+                    } else if(move == 2)
+                    {
+                        eventClient->rotY(x);
+                    } else if(move == 3)
+                    {
+                        eventClient->rotZ(x);
+                    }
+                } else if(mode == 3)
                 {
-                    eventClient->rotX(x);
-                } else if(move == 5)
-                {
-                    eventClient->rotY(x);
-                } else if(move == 6)
-                {
-                    eventClient->rotZ(x);
+                    if(move == 1)
+                    {
+                        eventClient->scaleX(x);
+                    } else if(move == 2)
+                    {
+                        eventClient->scaleY(x);
+                    } else if(move == 3)
+                    {
+                        eventClient->scaleZ(x);
+                    }
                 }
             }
             rejectMove = 0;
@@ -380,29 +437,35 @@ namespace mars
             mry->value().emissiveFactor = vsg::vec4{0.0, 0.3, 0.0, 1.0};
             mrz->value().diffuseFactor = vsg::vec4{0.0, 0.0, 1.0, 1.0};
             mrz->value().emissiveFactor = vsg::vec4{0.0, 0.0, 0.3, 1.0};
-            if(move == 1)
+
+            if(mode == 1)
             {
-                setColor(mx.get(), 2);
-            }
-            else if(move == 2)
+                if(move == 1)
+                {
+                    setColor(mx.get(), 2);
+                }
+                else if(move == 2)
+                {
+                    setColor(my.get(), 2);
+                }
+                else if(move == 3)
+                {
+                    setColor(mz.get(), 2);
+                }
+            } else if(mode == 2)
             {
-                setColor(my.get(), 2);
-            }
-            else if(move == 3)
-            {
-                setColor(mz.get(), 2);
-            }
-            else if(move == 4)
-            {
-                setColor(mrx.get(), 2);
-            }
-            else if(move == 5)
-            {
-                setColor(mry.get(), 2);
-            }
-            else if(move == 6)
-            {
-                setColor(mrz.get(), 2);
+                if(move == 1)
+                {
+                    setColor(mrx.get(), 2);
+                }
+                else if(move == 2)
+                {
+                    setColor(mry.get(), 2);
+                }
+                else if(move == 3)
+                {
+                    setColor(mrz.get(), 2);
+                }
             }
             mx->dirty();
             my->dirty();

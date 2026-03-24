@@ -17,11 +17,11 @@ namespace mars
             int mode, axis;
 
             virtual bool haveInteraction(std::vector<const vsg::Node*> &nodePath) override;
-            virtual void keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active_);
-            virtual bool pointerClickEvent(int x, int y);
-            virtual bool pointerReleaseEvent(int x, int y);
-            virtual bool pointerMoveEvent(int x, int y);
-            virtual void setActive(bool v);
+            virtual void keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active_) override;
+            virtual bool pointerClickEvent(int x, int y) override;
+            virtual bool pointerReleaseEvent(int x, int y) override;
+            virtual bool pointerMoveEvent(int x, int y) override;
+            virtual void setActive(bool v) override;
             void setPose(const utils::Vector &v,
                          const utils::Quaternion &q);
             void setScale(const utils::Vector &s);
@@ -30,7 +30,7 @@ namespace mars
             utils::Vector pos, scale;
             utils::Quaternion rot;
             int move;
-            bool active;
+            bool active, direct;
             int rejectMove;
 
             vsg::ref_ptr<vsg::Node> x, y, z, rx, ry, rz;

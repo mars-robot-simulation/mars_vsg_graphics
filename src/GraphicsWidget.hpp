@@ -34,7 +34,7 @@ namespace mars
             virtual void keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active) {}
             virtual bool pointerClickEvent(int x, int y) {return false;}
             virtual bool pointerReleaseEvent(int x, int y) {return false;}
-            virtual bool pointerMoveEvent(int x, int y) {}
+            virtual bool pointerMoveEvent(int x, int y) {return false;}
             virtual void setActive(bool v) {}
         };
 
