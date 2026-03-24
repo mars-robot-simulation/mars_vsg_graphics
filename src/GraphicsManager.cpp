@@ -467,8 +467,13 @@ namespace mars
             if(utils::getFilenameSuffix(name) == ".osg")
             {
                 utils::removeFilenameSuffix(&name);
-                name += ".vsgt";
-                vsg::write(rootNode, name);
+                for(auto &it: windows)
+                {
+                    char n[25];
+                    snprintf(n, 24, "%s_%d.vsgt", name.c_str(), it.first);
+                    fprintf(stderr, "export to %s", n);
+                    vsg::write(it.second->contentGroup, n);
+                }
             }
         }
 
