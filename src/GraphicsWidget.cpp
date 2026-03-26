@@ -75,7 +75,7 @@ namespace mars
                     activeHandler = nullptr;
                 }
             }
-            if(activeHandler)
+            else if(activeHandler)
             {
                 activeHandler->pointerClickEvent(event.x, event.y);
             }
