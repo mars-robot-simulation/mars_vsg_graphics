@@ -123,7 +123,8 @@ namespace mars
 
                 fpsLayout = vsg::StandardLayout::create();
                 fpsLayout->horizontalAlignment = vsg::StandardLayout::LEFT_ALIGNMENT;
-                fpsLayout->position = vsg::vec3(-0.0, -0.75, 0.5);
+                fpsLayout->verticalAlignment = vsg::StandardLayout::TOP_ALIGNMENT;
+                fpsLayout->position = vsg::vec3(-0.0, 0.0, 0.0);
                 fpsLayout->horizontal = vsg::vec3(0.025, 0.0, 0.0);
                 fpsLayout->vertical = vsg::vec3(0.0, 0.025, 0.0);
                 fpsLayout->color = vsg::vec4(0.2, 0.7, 0.2, 1.0);
@@ -686,11 +687,11 @@ namespace mars
                     auto mainWindow = windows.find(1);
                     if(mainWindow != windows.end())
                     {
-                        const int width = mainWindow->second->window->width();
-                        const int height = mainWindow->second->window->height();
+                        const int width = mainWindow->second->overlayView->camera->viewportState->viewports[0].width;
+                        const int height = mainWindow->second->overlayView->camera->viewportState->viewports[0].height;
                         const double ratio = static_cast<double>(width) / static_cast<double>(height);
-                        const double top = 0.5;
-                        const double left = -0.52*ratio;
+                        const double top = 0.5-(0.5/height)*62;
+                        const double left = -0.5*ratio+(0.5*ratio/width)*20;
                         fpsLayout->position = vsg::vec3(0.0, left, top);
                     }
 

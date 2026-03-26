@@ -457,13 +457,17 @@ namespace mars
                 VkExtent2D targetExtent{(unsigned int)width, (unsigned int)height};
                 double radius = 1.0;
                 auto lookAt = vsg::LookAt::create(vsg::dvec3(radius * 2.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
-                auto perspective = vsg::Perspective::create(30.0, static_cast<double>(width) / static_cast<double>(height), 0.001 * radius, radius * 100.5);
-                auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(targetExtent));
-                auto view2 = vsg::View::create(camera);
+                double ratio = static_cast<double>(width) / static_cast<double>(height);
+                auto perspective = vsg::Perspective::create(30.0, ratio, 0.001 * radius, radius * 100.5);
+                auto ortho = vsg::Orthographic::create(-0.5*ratio, 0.5*ratio,
+                                                       -0.5, 0.5,
+                                                       0.001 * radius, radius * 100.5);
+                auto camera = vsg::Camera::create(ortho, lookAt, vsg::ViewportState::create(targetExtent));
+                overlayView = vsg::View::create(camera);
                 // try to override view dependent state implementation
-                view2->viewDependentState = ViewDependentState::create(view2);
-                view2->addChild(overlayGroup);
-                renderGraph->addChild(view2);
+                overlayView->viewDependentState = ViewDependentState::create(overlayView);
+                overlayView->addChild(overlayGroup);
+                renderGraph->addChild(overlayView);
             }
         }
 

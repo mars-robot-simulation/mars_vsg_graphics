@@ -182,6 +182,7 @@ namespace mars
             vsg::ref_ptr<vsg::WindowTraits> traits;
             vsgQt::Window *window;
             QWidget *container;
+            vsg::ref_ptr<vsg::View> overlayView;
             vsg::ref_ptr<vsg::CommandGraph> commandGraph;
             vsg::ref_ptr<vsg::ImageInfo> colorImageInfo, depthImageInfo;
             vsg::ref_ptr<vsg::Image> colorImage, depthImage, captureImage, captureDepthImage;
