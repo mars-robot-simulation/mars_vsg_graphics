@@ -92,8 +92,16 @@ namespace mars
 
         bool Manipulator::haveInteraction(std::vector<const vsg::Node*> &nodePath)
         {
-            //LOG_ERROR("check for grab interaction");
-            if(mode > 0) return true;
+            if(mode > 0)
+            {
+                if(!direct)
+                {
+                    mode = 0;
+                    move = 0;
+                    setColors();
+                }
+                return true;
+            }
 
             move = 0;
             for (auto node : nodePath)
@@ -253,7 +261,7 @@ namespace mars
         bool Manipulator::pointerClickEvent(int x, int y)
         {
             //if(mode == 0) return false;
-            if(mode > 0)
+            if(!direct && mode > 0)
             {
                 mode = 0;
                 move = 0;
