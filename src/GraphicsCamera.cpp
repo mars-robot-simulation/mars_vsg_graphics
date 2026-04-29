@@ -83,7 +83,16 @@ namespace mars
                                              double *rx, double *ry, double *rz,
                                              double *rw)
         {
-            LOG_ERROR("GraphicsCamera::getViewportQuat not yet implemented!");
+            *tx = lookAt->eye.x;
+            *ty = lookAt->eye.y;
+            *tz = lookAt->eye.z;
+            vsg::dquat q1(vsg::dvec3(0.0, 1.0, 0.0), lookAt->up);
+            vsg::dquat q2(vsg::dvec3(0.0, 0.0, -1.0), -q1*(lookAt->center-lookAt->eye));
+            vsg::dquat q = q2*q1;
+            *rx = q.x;
+            *ry = q.y;
+            *rz = q.z;
+            *rw = q.w;
         }
 
         void GraphicsCamera::setEyeSep(double value)
