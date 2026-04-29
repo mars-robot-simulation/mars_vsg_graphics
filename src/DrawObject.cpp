@@ -145,8 +145,21 @@ namespace mars
                     } else
                     {
                         drawObject = GuiHelper::readNodeFromFile(filename);
-                        // we have to remove the render pipeline which was created by the loader
-                        vsg::visit<RemoveShader>(drawObject);
+                        // if we have an stl file we have to adapt the default orientation
+                        std::string suffix = utils::getFilenameSuffix(filename);
+                        if(utils::tolower(suffix) == ".stl")
+                        {
+                            vsg::dquat q(-3.14159265*0.5, vsg::dvec3(1, 0, 0));
+                            vsg::ref_ptr<vsg::MatrixTransform> stlTransform = vsg::MatrixTransform::create();
+                            stlTransform->matrix = vsg::rotate(q);
+                            stlTransform->addChild(drawObject);
+                            drawObject = stlTransform;
+                        } //else
+                        {
+                            // we have to remove the render pipeline which was created by the loader
+                            vsg::visit<RemoveShader>(drawObject);
+                        }
+
                     }
 /*
                     vsg::ref_ptr<vsg::PbrMaterialValue> materialValue(extractMaterialValue(drawObject));
