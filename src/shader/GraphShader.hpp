@@ -22,11 +22,13 @@ namespace mars
             void loadShader(configmaps::ConfigMap &vertexShader);
             void parseFunctionInfo(std::string functionName,
                                    configmaps::ConfigMap functionInfo);
+            std::string generateUniforms();
             std::string generateDefinitions();
             std::string generateVertexHeader();
             std::string generateFragmentHeader();
             std::string generateVertexShaderSource();
             std::string generateFragmentShaderSource();
+            void setBinding(std::string uniformName, int set, int binding);
 
             configmaps::ConfigMap options;
             std::string main_source;
@@ -34,6 +36,7 @@ namespace mars
             std::map<std::string, ShaderUniformT> uniforms;
             std::map<std::string, ShaderAttributeT> varyings;
             std::map<std::string, ShaderAttributeT> attributes;
+            bool debugOutput;
         };
     }
 }

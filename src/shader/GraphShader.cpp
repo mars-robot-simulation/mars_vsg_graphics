@@ -30,6 +30,7 @@ layout(set = 1, binding = 5) uniform WorldTransform{
 layout(location = 0) in vec3 vsg_Vertex;
 layout(location = 1) in vec3 vsg_Normal;
 layout(location = 2) in vec2 vsg_TexCoord0;
+layout(location = 3) in vec2 vsg_Color;
 
 out gl_PerVertex{ vec4 gl_Position; };
 )";
@@ -71,11 +72,19 @@ layout(set = 1, binding = 0) uniform LightData
 
 )";
 
-        GraphShader::GraphShader() {}
+        GraphShader::GraphShader() : debugOutput(false)
+        {
+
+        }
+
         GraphShader::~GraphShader() {}
 
         void GraphShader::loadShader(ConfigMap &shaderConfig)
         {
+            if(debugOutput)
+            {
+                LOG_ERROR("––");
+            }
             stringstream code;
             std::map<unsigned long, ConfigMap> nodeMap;
             std::vector<ConfigMap *> sortedNodes;
@@ -97,6 +106,7 @@ layout(set = 1, binding = 0) uniform LightData
             filterMap["vec4"] = 1;
             filterMap["sampler2D"] = 1;
             filterMap["image2D"] = 1;
+            filterMap["imageBuffer"] = 1;
             filterMap["samplerCube"] = 1;
             filterMap["outColor"] = 1;
 
@@ -116,6 +126,10 @@ layout(set = 1, binding = 0) uniform LightData
                 {
                     data = ConfigMap::fromYamlString((*it)["data"].getString());
                 }
+                if(debugOutput)
+                {
+                    LOG_ERROR(".. add node config for: %s", name.c_str());
+                }
                 nodeConfig[name] = data["data"];
             }
 
@@ -125,6 +139,10 @@ layout(set = 1, binding = 0) uniform LightData
             {
                 string function = (*it)["model"]["name"];
                 std::string name = replaceString((std::string)(*it)["name"], "::", "_");
+                if(debugOutput)
+                {
+                    LOG_ERROR(".. load node %s of function %s", name.c_str(), function.c_str());
+                }
                 // for backwards compatibility replace gl_Vertex by new vsg_Vertex
                 // todo: check if we need other replacements and document them all
                 if(name == "gl_Vertex") name = "vsg_Vertex";
@@ -134,6 +152,10 @@ layout(set = 1, binding = 0) uniform LightData
                 if(nodeConfig.hasKey(name) && nodeConfig[name].hasKey("type"))
                 {
                     string type = nodeConfig[name]["type"].getString();
+                    if(debugOutput)
+                    {
+                        LOG_ERROR("..   have type %s", type.c_str());
+                    }
                     if(nodeConfig[name].hasKey("loadName"))
                     {
                         function << nodeConfig[name]["loadName"];
@@ -154,6 +176,10 @@ layout(set = 1, binding = 0) uniform LightData
                         }
                         if(!options.hasKey(name))
                         {
+                            if(debugOutput)
+                            {
+                                LOG_ERROR("..     add uniform {%s, %s, %s, %s}", function.c_str(), name.c_str(), format.c_str(), flags.c_str());
+                            }
                             uniforms[name] = ShaderUniformT{function, name, format, flags};
                         }
                     } else if (type == "varying")
@@ -531,36 +557,9 @@ layout(set = 1, binding = 0) uniform LightData
             return code.str();
         }
 
-        std::string GraphShader::generateVertexHeader()
+        std::string GraphShader::generateUniforms()
         {
             stringstream code;
-            code << default_vert;
-            int outIndex = 0;
-            // varyings is the data transfered from one shader to the other
-            // e. g. from vertex to fragment
-            // todo: check if we have to distinguish between in and out varyings
-            for(auto v: varyings)
-            {
-                code << "layout(location = " << outIndex++ << ") out " << v.second << ";" << std::endl;
-            }
-            return code.str();
-        }
-
-        std::string GraphShader::generateFragmentHeader()
-        {
-            stringstream code;
-            code << default_frag;
-            int inIndex = 0;
-            // varyings is the data transfered from one shader to the other
-            // e. g. from vertex to fragment
-            // todo: check if we have to distinguish between in and out varyings
-            for(auto v: varyings)
-            {
-                code << "layout(location = " << inIndex++ << ") in " << v.second << ";" << std::endl;
-            }
-            code << "layout(location = 0) out vec4 outColor;" << endl;
-
-            // handle uniforms
             for(auto u: uniforms)
             {
                 if(u.second.set < 0 || u.second.binding < 0)
@@ -581,6 +580,43 @@ layout(set = 1, binding = 0) uniform LightData
                 }
                 code << u.second.type << " " << u.second.name << ";" << std::endl;
             }
+            return code.str();
+        }
+
+        std::string GraphShader::generateVertexHeader()
+        {
+            stringstream code;
+            code << default_vert;
+            int outIndex = 0;
+            // varyings is the data transfered from one shader to the other
+            // e. g. from vertex to fragment
+            // todo: check if we have to distinguish between in and out varyings
+            for(auto v: varyings)
+            {
+                code << "layout(location = " << outIndex++ << ") out " << v.second << ";" << std::endl;
+            }
+
+            // handle uniforms
+            code << generateUniforms();
+            return code.str();
+        }
+
+        std::string GraphShader::generateFragmentHeader()
+        {
+            stringstream code;
+            code << default_frag;
+            int inIndex = 0;
+            // varyings is the data transfered from one shader to the other
+            // e. g. from vertex to fragment
+            // todo: check if we have to distinguish between in and out varyings
+            for(auto v: varyings)
+            {
+                code << "layout(location = " << inIndex++ << ") in " << v.second << ";" << std::endl;
+            }
+            code << "layout(location = 0) out vec4 outColor;" << endl;
+
+            // handle uniforms
+            code << generateUniforms();
 
             return code.str();
         }
@@ -602,5 +638,18 @@ layout(set = 1, binding = 0) uniform LightData
             code << main_source << endl;
             return code.str();
         }
-    }
-}
+
+        void GraphShader::setBinding(std::string uniformName, int set, int binding)
+        {
+            for(auto &u : uniforms)
+            {
+                if(u.second.name == uniformName)
+                {
+                    u.second.set = set;
+                    u.second.binding = binding;
+                }
+            }
+        }
+
+    } // end of namespace vsg_graphics
+} // end of namespace mars
