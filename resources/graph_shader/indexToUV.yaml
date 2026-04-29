@@ -1,0 +1,7 @@
+params:
+  in:
+    index: {index: 0, type: int}
+    textureSize: {index: 1, type: int}
+  out:
+    uv: {index: 1, type: vec2}
+source: graph_shader/indexToUV.frag

@@ -1,0 +1,8 @@
+params:
+  in:
+    color: {index: 0, type: vec4}
+source: graph_shader/colorOut.vert
+varyings:
+  vec4:
+    - {name: vertexColor}
+ 
