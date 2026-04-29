@@ -235,6 +235,22 @@ namespace mars
             {
                 std::cout << "Could not create shaders." << std::endl;
             }
+
+            if(materialSpec.hasKey("printShader") && (bool)materialSpec["printShader"])
+            {
+                std::string source = vs.generateVertexShaderSource();
+                std::string filename = "shader_sources/" + name + "_vert.c";
+                utils::createDirectory("shader_sources");
+                FILE *f = fopen(filename.c_str(), "w");
+                fprintf(f, "%s", source.c_str());
+                fclose(f);
+                source = fs.generateFragmentShaderSource();
+                filename = "shader_sources/" + name + "_frag.c";
+                f = fopen(filename.c_str(), "w");
+                fprintf(f, "%s", source.c_str());
+                fclose(f);
+            }
+
             const vsg::ShaderStages shaders{vertexShader, fragmentShader};
 
             // todo: howto deal with global uniforms
