@@ -331,7 +331,7 @@ void pixellight_frag(vec4 base, vec3 n, float shadow, out vec4 outcol) {
   // }
 
   // calculate output color
-  outcol = vec4(color, 1.0);
+  outcol = vec4(color+pbr.emissiveFactor.xyz, 1.0);
   //outcol = vec4(base.rgb, 1.0);
   //outcol = brightness* ((ambient + diffuse_)*base  + specular_ + gl_FrontMaterial.emission*base);
 

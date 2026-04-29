@@ -44,6 +44,10 @@ namespace mars
             material.specularFactor[1] = (double)materialSpec["specularColor"]["g"];
             material.specularFactor[2] = (double)materialSpec["specularColor"]["b"];
             material.specularFactor[3] = (double)materialSpec["specularColor"]["a"];
+            material.emissiveFactor[0] = (double)materialSpec["emissionColor"]["r"];
+            material.emissiveFactor[1] = (double)materialSpec["emissionColor"]["g"];
+            material.emissiveFactor[2] = (double)materialSpec["emissionColor"]["b"];
+            material.emissiveFactor[3] = (double)materialSpec["emissionColor"]["a"];
 
             // binding 0 is always the material descriptor so we start with
             // 1 for textures
