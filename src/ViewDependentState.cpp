@@ -31,6 +31,8 @@ namespace mars
         {
             worldTransformUniform->value().projInverse = view->camera->projectionMatrix->inverse();
             worldTransformUniform->value().viewInverse = view->camera->viewMatrix->inverse();
+            VkViewport& viewport = view->camera->viewportState->viewports[0];
+            worldTransformUniform->value().viewport = vsg::vec4(viewport.x, viewport.y, viewport.width, viewport.height);
             worldTransformUniform->dirty();
             vsg::ViewDependentState::traverse(rt);
         }

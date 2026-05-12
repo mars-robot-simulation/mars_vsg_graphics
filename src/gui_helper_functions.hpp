@@ -17,6 +17,7 @@ namespace mars
         {
             vsg::mat4 projInverse;
             vsg::mat4 viewInverse;
+            vsg::vec4 viewport;
         };
         using WorldTransformUniformValue = vsg::Value<WorldTransformUniform>;
 
