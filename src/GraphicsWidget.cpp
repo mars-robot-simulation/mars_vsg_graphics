@@ -448,10 +448,19 @@ namespace mars
                 //viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
                 // todo: second window replaces first one at the moment
                 gm->viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
+
+#ifdef WIN32
+                auto container2 = QWidget::createWindowContainer(window, nullptr);
+                container2->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
+                container2->setFocusPolicy(Qt::StrongFocus);
+                container = new QWidget();
+                container2->setParent(container);
+                container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
+#else
                 container = QWidget::createWindowContainer(window, nullptr);
                 container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
                 container->setFocusPolicy(Qt::StrongFocus);
-
+#endif
                 // for none rtt widgets we create an overlay view
                 overlayGroup = vsg::Group::create();
                 VkExtent2D targetExtent{(unsigned int)width, (unsigned int)height};
