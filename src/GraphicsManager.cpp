@@ -1186,6 +1186,22 @@ namespace mars
 
         }
 
+        void* GraphicsManager::getEngineWindow(unsigned long id)
+        {
+            auto wit = windows.find(id);
+            if(wit == windows.end())
+            {
+                LOG_ERROR("GraphicsManager::getIntersection window with id %lu not found!", id);
+                return nullptr;
+            }
+            return (void*)&(wit->second->window->windowAdapter);
+        }
+
+        void* GraphicsManager::getEngineViewer()
+        {
+            return (void*)&(viewer);
+        }
+
     } // end of namespace vsg_graphics
 } // end of namespace mars
 

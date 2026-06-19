@@ -269,6 +269,8 @@ namespace mars
             virtual void dirty() override;
             virtual bool getIntersection(unsigned long windowID, const utils::Vector &p,
                                          const utils::Vector &dir, utils::Vector &pos) override;
+            virtual void* getEngineWindow(unsigned long id) override;
+            virtual void* getEngineViewer() override;
 
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
