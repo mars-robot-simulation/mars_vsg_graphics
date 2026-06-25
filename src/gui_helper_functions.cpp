@@ -21,6 +21,7 @@ namespace mars
         std::map<std::string, vsg::ref_ptr<vsg::DescriptorImage>> GuiHelper::textureFiles;
         std::map<std::string, vsg::ref_ptr<vsg::Data>> GuiHelper::imageFiles;
         std::map<std::string, vsg::ref_ptr<MARSStateGroup>> GuiHelper::stateGroups;
+        std::map<std::string, vsg::ref_ptr<vsg::Image>> GuiHelper::fbCaptureImages;
         vsg::ref_ptr<vsg::Group> GuiHelper::stateGroupNodes = vsg::StateGroup::create();
         std::string GuiHelper::resourcePath = "";
 

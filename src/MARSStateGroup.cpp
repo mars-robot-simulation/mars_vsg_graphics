@@ -54,6 +54,41 @@ namespace mars
             unsigned short binding = 1;
             bool haveDiffuseMap = false;
             std::vector<TextureMapping> textureMapping;
+
+            // todo: only one is applies either diffuseTexture or bgTexture
+            if(materialSpec.hasKey("fbTexture")) // texture taken from window framebuffer
+            {
+                TextureMapping tm;
+                std::string bgCaptureImageName = materialSpec["fbTexture"];
+                //fprintf(stderr, "%s\n", materialSpec.toYamlString().c_str());
+                if(GuiHelper::fbCaptureImages.find(bgCaptureImageName) == GuiHelper::fbCaptureImages.end())
+                {
+                    LOG_ERROR("MARSStateGroup: Can't find capture image: %s", bgCaptureImageName.c_str());
+                } else
+                {
+                    tm.name = "diffuseMap";
+                    tm.binding = binding++;
+
+                    auto imageView = vsg::ImageView::create(GuiHelper::fbCaptureImages[bgCaptureImageName]);
+                    auto sampler = vsg::Sampler::create();
+
+                    auto imageInfo = vsg::ImageInfo::create(
+                        sampler,
+                        imageView,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                        );
+
+                    tm.descriptor = vsg::DescriptorImage::create(
+                        imageInfo,
+                        tm.binding, // Binding
+                        0,
+                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                        );
+                    textureMapping.push_back(tm);
+                    haveDiffuseMap = true;
+                }
+            }
+
             if(materialSpec.hasKey("diffuseTexture"))
             {
                 TextureMapping tm;

@@ -113,6 +113,7 @@ namespace mars
             static vsg::ref_ptr<vsg::Device> device;
             static vsg::ref_ptr<vsg::Options> getOrCreateOptions();
             static std::map<std::string, vsg::ref_ptr<MARSStateGroup>> stateGroups;
+            static std::map<std::string, vsg::ref_ptr<vsg::Image>> fbCaptureImages;
 
         private:
             interfaces::GraphicsManagerInterface *graphicsInterface;
