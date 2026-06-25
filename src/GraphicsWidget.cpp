@@ -365,6 +365,7 @@ namespace mars
                 auto transferImageView = createTransferImageView(offscreenImageFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
                 auto transferDepthImageView = createTransferImageView(depthFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
                 captureImage = createCaptureImage(offscreenImageFormat, targetExtent);
+                GuiHelper::fbCaptureImages[name] = captureImage;
                 captureDepthImage = createCaptureImage(depthFormat, targetExtent);
                 auto captureCommands = createTransferCommands(transferImageView->image,
                                                               captureImage);
