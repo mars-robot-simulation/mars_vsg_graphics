@@ -74,6 +74,13 @@ namespace mars
                     activeHandler->setActive(false);
                     activeHandler = nullptr;
                 }
+                if(!activeHandler)
+                {
+                    if(gw->gm->handlePickEvent(gw->intersection))
+                    {
+                        event.handled = true;
+                    }
+                }
             }
             else if(activeHandler)
             {
@@ -93,6 +100,10 @@ namespace mars
                 // todo: apply selection
                 gw->pick(event.x, event.y);
             }
+            if(gw->gm->handleReleaseEvent())
+            {
+                event.handled = true;
+            }
         }
 
         void EventHandler::apply(vsg::MoveEvent& moveEvent)
@@ -101,9 +112,9 @@ namespace mars
             {
                 moveEvent.handled = activeHandler->pointerMoveEvent(moveEvent.x-gw->mouseX,
                                                                     moveEvent.y-gw->mouseY);
-                gw->mouseX = moveEvent.x;
-                gw->mouseY = moveEvent.y;
             }
+            gw->mouseX = moveEvent.x;
+            gw->mouseY = moveEvent.y;
             //cout << "moveEvent: " << moveEvent.x << " " << moveEvent.y << endl;
         }
 
@@ -365,13 +376,14 @@ namespace mars
                 auto transferImageView = createTransferImageView(offscreenImageFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
                 auto transferDepthImageView = createTransferImageView(depthFormat, targetExtent, VK_SAMPLE_COUNT_1_BIT);
                 captureImage = createCaptureImage(offscreenImageFormat, targetExtent);
+                LOG_ERROR("GraphicsWidget: Store captureImage for %s", name.c_str());
                 GuiHelper::fbCaptureImages[name] = captureImage;
                 captureDepthImage = createCaptureImage(depthFormat, targetExtent);
                 auto captureCommands = createTransferCommands(transferImageView->image,
                                                               captureImage);
                 auto captureDepthCommands = createTransferCommands(transferDepthImageView->image,
                                                                    captureDepthImage);
-                auto renderGraph = vsg::RenderGraph::create();
+                renderGraph = vsg::RenderGraph::create();
                 renderGraph->framebuffer = createOffscreenFramebuffer(transferImageView, transferDepthImageView, samples);
 
                 renderGraph->renderArea.offset = {0, 0};
@@ -439,7 +451,7 @@ namespace mars
                 view->addChild(contentGroup);
 
                 // set up the render graph
-                auto renderGraph = vsg::RenderGraph::create(*window, view);
+                renderGraph = vsg::RenderGraph::create(*window, view);
                 renderGraph->contents = VK_SUBPASS_CONTENTS_INLINE;
 
                 renderGraph->setClearValues(vsg::sRGB_to_linear(clearColor_));
@@ -704,7 +716,7 @@ namespace mars
             contentGroup->accept(*intersector);
             if (intersector->intersections.empty()) return false;
             // sort the intersections front to back
-            auto intersection = intersector->intersections[0];
+            intersection = intersector->intersections[0];
             for(auto &it : intersector->intersections)
             {
                 if(it->ratio < intersection->ratio)

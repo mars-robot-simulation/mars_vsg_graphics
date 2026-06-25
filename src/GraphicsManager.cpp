@@ -1,6 +1,7 @@
 #include <QWidget>
 
 #include "GraphicsManager.hpp"
+#include "GraphicsCamera.hpp"
 #include "DrawObject.hpp"
 #include "Grid.hpp"
 #include "config.h"
@@ -23,6 +24,7 @@ namespace mars
         {
             (void)QTWidget;
             dirty_ = true;
+            uvPointerTrackingActive = false;
             vsg::Logger::instance()->level = vsg::Logger::LOGGER_INFO;
         }
 
@@ -717,6 +719,25 @@ namespace mars
             if(iter != windows.end())
             {
                 auto window = iter->second;
+                if(uvPointerTrackingActive)
+                {
+                    auto intersector = vsg::LineSegmentIntersector::create(*(window->graphicsCamera->camera), window->mouseX, window->mouseY);
+                    window->contentGroup->accept(*intersector);
+                    if(!intersector->intersections.empty())
+                    {
+                        //std::cout << "pick: " << window->mouseX << " " << window->mouseY << std::endl;                                 // sort the intersections front to back
+                        auto intersection = intersector->intersections[0];
+                        for(auto &it: intersector->intersections)
+                        {
+                            if(it->ratio < intersection->ratio)
+                            {
+                                intersection = it;
+                            }
+                        }
+                        handlePickEvent(intersection, false);
+                    }
+
+                }
                 //GuiHelper::worldTransformUniform->value().projInverse = window->perspective->inverse();
                 //GuiHelper::worldTransformUniform->value().viewInverse = window->lookAt->inverse();
                 //GuiHelper::worldTransformUniform->dirty();
@@ -1191,15 +1212,113 @@ namespace mars
             auto wit = windows.find(id);
             if(wit == windows.end())
             {
-                LOG_ERROR("GraphicsManager::getIntersection window with id %lu not found!", id);
+                LOG_ERROR("GraphicsManager::getEngineWindow window with id %lu not found!", id);
                 return nullptr;
             }
             return (void*)&(wit->second->window->windowAdapter);
         }
 
+        void* GraphicsManager::getEngineDevice(unsigned long id)
+        {
+            // at the moment we don't support different devices
+            return (void*)&(GuiHelper::device);
+        }
+
+        void* GraphicsManager::getEngineRenderPass(unsigned long id)
+        {
+            auto wit = windows.find(id);
+            if(wit == windows.end())
+            {
+                LOG_ERROR("GraphicsManager::getEngineRenderPass window with id %lu not found!", id);
+                return nullptr;
+            }
+            return (void*)(wit->second->renderGraph->getRenderPass());
+        }
+
         void* GraphicsManager::getEngineViewer()
         {
             return (void*)&(viewer);
+        }
+
+        void GraphicsManager::addUVPointerClient(const std::string &node, UVPointerClient *cl)
+        {
+            // todo: check that we add a client only once
+            uvPointerClients[node].push_back(cl);
+            uvPointerTrackingActive = true;
+        }
+
+        bool GraphicsManager::handlePickEvent(vsg::ref_ptr<vsg::LineSegmentIntersector::Intersection> intersection, bool click)
+        {
+            auto worldPos = intersection->worldIntersection;
+
+            // if(click)
+            // {
+            //     std::cout << "pick: " << worldPos.x << " " <<  worldPos.y << "   " << click << std::endl;
+            // }
+
+            // identify draw object
+            bool handled = false;
+            for(auto node: intersection->nodePath)
+            {
+                auto transform = node->cast<vsg::MatrixTransform>();
+                if(transform)
+                {
+                    //LOG_ERROR("... found transform");
+                    // compare with drawobjects
+                    for(auto &obj: drawObjects)
+                    {
+                        if(obj.second->poseTransform == transform)
+                        {
+                            auto pos = vsg::inverse(transform->matrix)*worldPos;
+                            //LOG_ERROR("...   found drawObject (%s)", obj.second->name.c_str());
+                            // check if we have an uv tracking client
+                            for(auto &client: uvPointerClients)
+                            {
+                                //LOG_ERROR("...   check: %s", client.first.c_str());
+                                if(obj.second->name == client.first)
+                                {
+                                    //LOG_ERROR("...     found client");
+                                    for(auto &ec: client.second)
+                                    {
+                                        if(click)
+                                        {
+                                            if(ec->pointerClickEvent(pos.x, pos.y))
+                                            {
+                                                handled = true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if(ec->pointerEvent(pos.x, pos.y))
+                                            {
+                                                handled = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            return handled;
+        }
+
+        bool GraphicsManager::handleReleaseEvent()
+        {
+            bool handled = false;
+            for(auto &client: uvPointerClients)
+            {
+                for(auto &ec: client.second)
+                {
+                    if(ec->pointerReleaseEvent())
+                    {
+                        handled = true;
+                    }
+                }
+            }
+            return handled;
         }
 
     } // end of namespace vsg_graphics

@@ -37,9 +37,9 @@ namespace mars
             bool maskSet;
             bool appliedCaptureCommands;
             bool visible;
+            vsg::ref_ptr<vsg::MatrixTransform> poseTransform;
 
         private:
-            vsg::ref_ptr<vsg::MatrixTransform> poseTransform;
             vsg::ref_ptr<vsg::MatrixTransform> scaleTransform;
             utils::Vector position;
             utils::Quaternion quaternion;

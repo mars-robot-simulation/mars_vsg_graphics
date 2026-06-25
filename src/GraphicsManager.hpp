@@ -270,7 +270,13 @@ namespace mars
             virtual bool getIntersection(unsigned long windowID, const utils::Vector &p,
                                          const utils::Vector &dir, utils::Vector &pos) override;
             virtual void* getEngineWindow(unsigned long id) override;
+            virtual void* getEngineDevice(unsigned long id) override;
+            virtual void* getEngineRenderPass(unsigned long id) override;
             virtual void* getEngineViewer() override;
+
+            virtual void addUVPointerClient(const std::string &node, interfaces::UVPointerClient *cl);
+            bool handlePickEvent(vsg::ref_ptr<vsg::LineSegmentIntersector::Intersection> intersection, bool click=true);
+            bool handleReleaseEvent();
 
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
@@ -291,6 +297,8 @@ namespace mars
             GuiHelper *guiHelper;
             bool dirty_;
             std::map<std::string, vsg::ref_ptr<Manipulator>> manipulators;
+            std::map<std::string, std::vector<interfaces::UVPointerClient*>> uvPointerClients;
+            bool uvPointerTrackingActive;
 
             // mars event handling
             std::list<interfaces::GraphicsUpdateInterface*> graphicsUpdateObjects;

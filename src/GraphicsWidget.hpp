@@ -189,9 +189,11 @@ namespace mars
             vsg::ref_ptr<vsg::RenderGraph> renderGraph;
             vsg::ref_ptr<vsg::Group> overlayGroup;
             vsg::ref_ptr<vsg::Group> contentGroup;
+            vsg::ref_ptr<vsg::LineSegmentIntersector::Intersection> intersection;
             GraphicsCamera *graphicsCamera;
             std::vector<const vsg::Node*> pickNodePath;
             vsg::ref_ptr<EventHandler> eventHandler;
+            GraphicsManager* gm;
 
             // todo: implement setName which applies the name to the window if available
             std::string name;
@@ -226,7 +228,6 @@ namespace mars
 
             // called post drawing
             //PostDrawCallback* postDrawCallback;
-            GraphicsManager* gm;
 
             // the widget id
             unsigned long widgetID;
