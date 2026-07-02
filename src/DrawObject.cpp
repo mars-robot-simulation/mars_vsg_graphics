@@ -127,6 +127,15 @@ namespace mars
                         geomInfo.dz.set(0, 0, d);
                         drawObject = builder->createSphere(geomInfo, stateInfo);
                     }
+                    else if(type == "cylinder")
+                    {
+                        double r = (double)spec["extend"]["x"]*2;
+                        double l = (double)spec["extend"]["y"];
+                        geomInfo.dx.set(r, 0, 0);
+                        geomInfo.dy.set(0, r, 0);
+                        geomInfo.dz.set(0, 0, l);
+                        drawObject = builder->createCylinder(geomInfo, stateInfo);
+                    }
                     if(drawObject.cast<vsg::StateGroup>())
                     {
                         drawObject = drawObject.cast<vsg::StateGroup>()->children[0];
