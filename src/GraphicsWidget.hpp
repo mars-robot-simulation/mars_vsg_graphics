@@ -6,6 +6,10 @@
 //#include "GraphicsCamera.h"
 //#include "PostDrawCallback.h"
 
+#ifdef XRTEST
+#include "xr.hpp"
+#endif
+
 #include <mars_interfaces/MARSDefs.h>
 #include <mars_utils/Vector.h>
 #include <mars_interfaces/graphics/GraphicsWindowInterface.h>
@@ -30,12 +34,12 @@ namespace mars
         {
         public:
             InteractionHandler() : Inherit() {}
-            virtual bool haveInteraction(std::vector<const vsg::Node*> &nodePath) {return false;}
-            virtual void keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active) {}
-            virtual bool pointerClickEvent(int x, int y) {return false;}
-            virtual bool pointerReleaseEvent(int x, int y) {return false;}
-            virtual bool pointerMoveEvent(int x, int y) {return false;}
-            virtual void setActive(bool v) {}
+            virtual bool haveInteraction(std::vector<const vsg::Node*> &nodePath) {(void) nodePath; return false;}
+            virtual void keyPressEvent(vsg::KeyPressEvent& keyPress, bool &active) {(void) keyPress; (void) active;}
+            virtual bool pointerClickEvent(int x, int y) {(void) x; (void) y; return false;}
+            virtual bool pointerReleaseEvent(int x, int y) {(void) x; (void) y; return false;}
+            virtual bool pointerMoveEvent(int x, int y) {(void) x; (void) y; return false;}
+            virtual void setActive(bool v) {(void) v;}
         };
 
         class EventHandler : public vsg::Inherit<vsg::Visitor, EventHandler>

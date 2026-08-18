@@ -6,13 +6,6 @@ set(PROJECT_DESCRIPTION "This library provides a 3d visualization through simple
 include(FindPkgConfig)
 include(CheckIncludeFileCXX)
 
-CHECK_INCLUDE_FILE_CXX("tr1/functional" USE_TR1)
-if(${USE_TR1})
-    ADD_DEFINITIONS(-DUSE_TR1)
-else(${USE_TR1})
-    ADD_DEFINITIONS(-DNO_TR1)
-endif()
-
 find_package(lib_manager REQUIRED)
 lib_defaults()
 define_module_info()
@@ -50,6 +43,16 @@ find_package(vsg 1.1.11)
 vsg_setup_dir_vars()
 vsg_setup_build_vars()
 
+OPTION(XRTEST "Compile with XR Test Support" true)
+if(XRTEST)
+    ADD_DEFINITIONS(-DXRTEST)
+    set(XR_DEPENDENCIES vsgvr)
+    find_package(vsgvr)
+    find_package(OpenXR)
+    find_package(JsonCpp)
+    set(XR_LIBS vsgvr::vsgvr)
+endif()
+
 find_package(vsgXchange 1.1.7 QUIET)
 find_package(vsgQt)
 
@@ -58,6 +61,7 @@ setup_qt()
 
 pkg_check_modules(Dependencies REQUIRED IMPORTED_TARGET ${DEPENDENCIES})
 
+message(${CMAKE_INSTALL_PREFIX})
 add_definitions(-DMARS_VSG_GRAPHICS_DEFAULT_RESOURCES_PATH=\"${CMAKE_INSTALL_PREFIX}/share/mars_vsg_graphics\")
 
 set(HEADERS
@@ -70,6 +74,7 @@ set(HEADERS
            src/shader/ShaderTypes.hpp
            src/gui_helper_functions.hpp
            src/ImageUtils.hpp
+           src/xr.hpp
            src/MARSStateGroup.hpp
            src/Grid.hpp
            src/Manipulator.hpp
@@ -88,6 +93,7 @@ set(SOURCES
            src/shader/ShaderTypes.cpp
            src/gui_helper_functions.cpp
            src/ImageUtils.cpp
+           src/xr.cpp
            src/MARSStateGroup.cpp
            src/Grid.cpp
            src/Manipulator.cpp
@@ -138,6 +144,7 @@ target_link_libraries(${PROJECT_NAME}
         vsg::vsg
         vsgXchange::vsgXchange
         vsgQt::vsgQt
+        ${XR_LIBS}
         ${QT5_TARGETS}
 )
 

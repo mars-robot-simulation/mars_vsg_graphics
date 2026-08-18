@@ -273,11 +273,39 @@ namespace mars
             virtual void* getEngineDevice(unsigned long id) override;
             virtual void* getEngineRenderPass(unsigned long id) override;
             virtual void* getEngineViewer() override;
+            virtual void addXRClient(interfaces::XRClient *c) override;
+            virtual void removeXRClient(interfaces::XRClient *c) override;
+            void initializeXR();
+            void handleXREvents();
+            void compileXRViewer();
+            void drawXR();
 
             virtual void addUVPointerClient(const std::string &node, interfaces::UVPointerClient *cl);
             bool handlePickEvent(vsg::ref_ptr<vsg::LineSegmentIntersector::Intersection> intersection, bool click=true);
             bool handleReleaseEvent();
 
+#ifdef XRTEST
+            vsg::ref_ptr<vsgvr::Viewer> vrViewer;
+            vsg::ref_ptr<vsgvr::Instance> xrInstance;
+            vsg::ref_ptr<vsgvr::CompositionLayerProjection> headsetCompositionLayer;
+            std::vector<vsg::ref_ptr<vsg::Camera>> xrCameras;
+            vsg::ref_ptr<vsgvr::UserOrigin> userOrigin;
+            vsg::ref_ptr<vsgvr::SpaceBinding> headPose;
+            vsg::ref_ptr<vsgvr::ActionPoseBinding> rightHandPose, leftHandPose;
+            vsg::ref_ptr<vsgvr::ActionSet> actionSet;
+            vsg::ref_ptr<vsgvr::Action> strafeXAction;
+            vsg::ref_ptr<vsgvr::Action> strafeYAction;
+            vsg::ref_ptr<vsgvr::Action> quitAction;
+            vsg::ref_ptr<vsgvr::Action> grabAction;
+            vsg::ref_ptr<vsgvr::Action> selectAction, toggleAction, cancelAction;
+            bool grabValue, grabActive, selectActive, toggleActive, cancelActive;
+            vsg::dvec3 originPosition;
+            double originRotation;
+            vsg::time_point lastFrameTime;
+            bool xr;
+            vsgvr::Viewer::PollEventsResult xrPollResult;
+#endif
+            vsg::time_point now;
             vsg::ref_ptr<vsgQt::Viewer> viewer;
             vsg::ref_ptr<vsg::Group> rootNode;
             vsg::ref_ptr<vsg::Group> contentGroup;
@@ -302,6 +330,7 @@ namespace mars
 
             // mars event handling
             std::list<interfaces::GraphicsUpdateInterface*> graphicsUpdateObjects;
+            std::list<interfaces::XRClient*> xrClients;
 
             // cfg_manager stuff
             cfg_manager::CFGManagerInterface *cfg;

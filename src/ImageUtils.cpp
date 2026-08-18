@@ -37,7 +37,7 @@ namespace mars
             image->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             image->samples = VK_SAMPLE_COUNT_1_BIT;
             image->tiling = VK_IMAGE_TILING_LINEAR;
-            image->usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            image->usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
             switch (sourceFormat)
             {
             case VK_FORMAT_D16_UNORM_S8_UINT:
@@ -464,30 +464,43 @@ namespace mars
 
             vsg::RenderPass::Subpasses subpasses{subpass};
 
-            vsg::SubpassDependency dependency = {};
-            dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependency.dstSubpass = 0;
-            // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            // dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            // dependency.dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            vsg::RenderPass::Dependencies dependencies(4);
 
-            dependency.dependencyFlags = 0;
+            // memory read in shader?
+            dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+            dependencies[0].dstSubpass = 0;
+            dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependencies[0].dependencyFlags = 0;
 
-            vsg::SubpassDependency dependency2 = {};
-            dependency2.srcSubpass = 0;
-            dependency2.dstSubpass = VK_SUBPASS_EXTERNAL;
-            dependency2.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dependency2.dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            dependency2.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            dependency2.dependencyFlags = 0;
+            // memory read after shader?
+            dependencies[1].srcSubpass = 0;
+            dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+            dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            dependencies[1].dependencyFlags = 0;
 
-            vsg::RenderPass::Dependencies dependencies{dependency, dependency2};
+            // access color attachment from shader?
+            dependencies[2].srcSubpass = VK_SUBPASS_EXTERNAL;
+            dependencies[2].dstSubpass = 0;
+            dependencies[2].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dependencies[2].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependencies[2].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            dependencies[2].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependencies[2].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+            // access color attachment from other shader?
+            dependencies[3].srcSubpass = 0;
+            dependencies[3].dstSubpass = VK_SUBPASS_EXTERNAL;
+            dependencies[3].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependencies[3].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dependencies[3].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependencies[3].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            dependencies[3].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
             return vsg::RenderPass::create(GuiHelper::device, attachments, subpasses, dependencies);
         }

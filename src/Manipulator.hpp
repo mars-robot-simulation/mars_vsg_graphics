@@ -25,10 +25,14 @@ namespace mars
             void setPose(const utils::Vector &v,
                          const utils::Quaternion &q);
             void setScale(const utils::Vector &s);
+            void setStartPosition(const utils::Vector &v);
+            void setGrabPosition(const utils::Vector &v);
+            void setStartRotation(const utils::Quaternion &q);
+            void setGrabRotation(const utils::Quaternion &q);
 
         private:
-            utils::Vector pos, scale;
-            utils::Quaternion rot;
+            utils::Vector pos, scale, startPosition;
+            utils::Quaternion rot, startRotation;
             int move;
             bool active, direct;
             int rejectMove;

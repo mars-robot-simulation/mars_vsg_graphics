@@ -8,7 +8,7 @@
 #include "ImageUtils.hpp"
 #include <vsgXchange/all.h>
 #include <mars_utils/misc.h>
-
+#include <mars_utils/mathUtils.h>
 
 namespace mars
 {
@@ -25,7 +25,16 @@ namespace mars
             (void)QTWidget;
             dirty_ = true;
             uvPointerTrackingActive = false;
+#ifdef XRTEST
+            grabActive = false;
+            grabValue = false;
+            selectActive = false;
+            toggleActive = false;
+            cancelActive = false;
+            xr = false;
+#endif
             vsg::Logger::instance()->level = vsg::Logger::LOGGER_INFO;
+            fprintf(stderr, "Create GraphicsManager Instance\n");
         }
 
         GraphicsManager::~GraphicsManager()
@@ -51,9 +60,101 @@ namespace mars
             delete guiHelper;
         }
 
+        void GraphicsManager::initializeXR()
+        {
+#ifdef XRTEST
+            if(!xr) return;
+            headPose = vsgvr::SpaceBinding::create(vsgvr::ReferenceSpace::create(vrViewer->getSession(), XrReferenceSpaceType::XR_REFERENCE_SPACE_TYPE_VIEW));
+            vrViewer->spaceBindings.push_back(headPose);
+            std::map<std::string, std::list<vsgvr::ActionSet::SuggestedInteractionBinding>> actionsToSuggest;
+            // actionsToSuggest["/interaction_profiles/khr/simple_controller"] = {
+            //     {_leftHandPose, "/user/hand/left/input/aim/pose"},
+            //     {_rightHandPose, "/user/hand/right/input/aim/pose"},
+            //     {_switchInteractionAction, "/user/hand/right/input/select/click"},
+            // };
+            // actionsToSuggest["/interaction_profiles/oculus/touch_controller"] = {
+            //     {_leftHandPose, "/user/hand/left/input/aim/pose"},
+            //     {_rightHandPose, "/user/hand/right/input/aim/pose"},
+            //     // A boolean action on a float input will be converted by the OpenXR runtime
+            //     {_switchInteractionAction, "/user/hand/right/input/trigger/value"},
+            // };
+            actionSet = vsgvr::ActionSet::create(xrInstance, "slide", "Slide");
+            rightHandPose = vsgvr::ActionPoseBinding::create(xrInstance, actionSet, "right_hand", "Right Hand");
+            leftHandPose = vsgvr::ActionPoseBinding::create(xrInstance, actionSet, "left_hand", "Left Hand");
+            strafeXAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_FLOAT_INPUT, "strafe_x", "Strafe X");
+            strafeYAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_FLOAT_INPUT, "strafe_y", "Strafe Y");
+            grabAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "grab", "Grab");
+            quitAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "quit", "Quit");
+            selectAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "select", "Select");
+            toggleAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "toggle", "Toggle");
+            cancelAction = vsgvr::Action::create(xrInstance, actionSet, XrActionType::XR_ACTION_TYPE_BOOLEAN_INPUT, "cancel", "Cancel");
+            actionSet->actions = {
+                rightHandPose,
+                leftHandPose,
+                strafeXAction,
+                strafeYAction,
+                grabAction,
+                quitAction,
+                selectAction,
+                toggleAction,
+                cancelAction
+            };
+            actionsToSuggest["/interaction_profiles/oculus/touch_controller"] = {
+                {strafeXAction, "/user/hand/left/input/thumbstick/x"},
+                {strafeYAction, "/user/hand/left/input/thumbstick/y"},
+                {grabAction, "/user/hand/right/input/trigger/value"},
+                {quitAction, "/user/hand/right/input/b/click"},
+                {selectAction, "/user/hand/right/input/a/click"},
+                {toggleAction, "/user/hand/left/input/x/click"},
+                {cancelAction, "/user/hand/left/input/y/click"},
+                {rightHandPose, "/user/hand/right/input/aim/pose"},
+                {leftHandPose, "/user/hand/left/input/aim/pose"},
+                //{rotateAction, "/user/hand/right/input/thumbstick/x"}
+            };
+            char* vive_ = getenv("VIVE");
+            if(vive_)
+            {
+                std::string vive = vive_;
+                if(vive == "1" || tolower(vive) == "true")
+                {
+                    actionsToSuggest["/interaction_profiles/htc/vive_focus3_controller"] = {
+                        {strafeXAction, "/user/hand/left/input/thumbstick/x"},
+                        {strafeYAction, "/user/hand/left/input/thumbstick/y"},
+                        {grabAction, "/user/hand/right/input/trigger/value"},
+                        {quitAction, "/user/hand/right/input/b/click"},
+                        {selectAction, "/user/hand/right/input/a/click"},
+                        {toggleAction, "/user/hand/left/input/x/click"},
+                        {cancelAction, "/user/hand/left/input/y/click"},
+                        {rightHandPose, "/user/hand/right/input/aim/pose"},
+                        {leftHandPose, "/user/hand/left/input/aim/pose"},
+                    };
+                }
+            }
+
+            // actionsToSuggest["/interaction_profiles/bytedance/pico4_controller"] = {
+            //     {strafeXAction, "/user/hand/left/input/thumbstick/x"},
+            //     {strafeYAction, "/user/hand/left/input/thumbstick/y"},
+            //     //{rotateAction, "/user/hand/right/input/thumbstick/x"}
+            // };
+            for (auto& p : actionsToSuggest)
+            {
+                if (! vsgvr::ActionSet::suggestInteractionBindings(xrInstance, p.first, p.second))
+                {
+                    throw std::runtime_error("Failed to configure interaction bindings for controllers");
+                }
+            }
+            vrViewer->actionSets.push_back(actionSet);
+            vrViewer->activeActionSets.push_back(actionSet);
+            originPosition = vsg::dvec3(0.0, 0.0, 0.0);
+            originRotation = 0.0;
+            lastFrameTime = vsg::clock::now();
+#endif
+        }
+
         void GraphicsManager::initializeOSG(void *data, bool createWindow)
         {
             (void)data;
+            fprintf(stderr, "GraphicsManager – initializeOSG\n");
             if(!viewer) {
                 cfg = libManager->getLibraryAs<cfg_manager::CFGManagerInterface>("cfg_manager");
                 if(!cfg)
@@ -62,7 +163,17 @@ namespace mars
                     return;
                 }
                 setupCFG();
-
+#ifdef XRTEST
+                char* xrenv_ = getenv("XR");
+                if(xrenv_)
+                {
+                    std::string xrenv = xrenv_;
+                    if(xrenv == "1" || xrenv == "true" || xrenv=="TRUE")
+                    {
+                        xr = true;
+                    }
+                }
+#endif
                 nextDrawID = 1;
                 nextWindowID = 1;
 
@@ -89,10 +200,8 @@ namespace mars
                 directionalLight->direction.set(-1.0f, -1.0f, -5.0f);
                 rootNode->addChild(directionalLight);
 
-
                 // todo: create version without qt
                 viewer = vsgQt::Viewer::create();
-
 
                 // todo: we have to search for a clean way to provide this uniform;
                 //       we may have to inherit from the camera and update the uniform
@@ -106,7 +215,7 @@ namespace mars
                     LOG_ERROR("create new 3d window in initialize");
                     new3DWindow(0);
                 }
-
+                initializeXR();
                 auto options = GuiHelper::getOrCreateOptions();
                 std::string fontFilename = utils::pathJoin(GuiHelper::resourcePath, "resources/Fonts/IBMPlexSans-Medium.ttf");
 
@@ -473,7 +582,7 @@ namespace mars
                 for(auto &it: windows)
                 {
                     char n[25];
-                    snprintf(n, 24, "%s_%d.vsgt", name.c_str(), it.first);
+                    snprintf(n, 24, "%s_%llu.vsgt", name.c_str(), it.first);
                     fprintf(stderr, "export to %s", n);
                     vsg::write(it.second->contentGroup, n);
                 }
@@ -485,6 +594,8 @@ namespace mars
         unsigned long GraphicsManager::new3DWindow(void *myQTWidget, bool rtt,
                                                    int width, int height, const std::string &name)
         {
+            (void) myQTWidget;
+
             GraphicsWidget *shared = nullptr;
             if(windows.size() > 0)
             {
@@ -670,6 +781,345 @@ namespace mars
             return dummy;
         }
 
+        void GraphicsManager::handleXREvents()
+        {
+#ifdef XRTEST
+            if(!xr) return;
+            // OpenXR events must be checked first
+            xrPollResult = vrViewer->pollEvents();
+            if(quitAction->getStateValid())
+            {
+                auto qState = quitAction->getStateBool();
+                if(qState.isActive)
+                {
+                    if(static_cast<bool>(qState.currentState))
+                    {
+                        exit(0);
+                    }
+                }
+            }
+
+            GraphicsWidget *gw = windows[1];
+            // handle strafe actions
+            if(strafeXAction->getStateValid() && strafeYAction->getStateValid())
+            {
+                auto xState = strafeXAction->getStateFloat();
+                auto yState = strafeYAction->getStateFloat();
+                bool updateOrigin = false;
+                auto deltaT = std::chrono::duration<double, std::chrono::milliseconds::period>(now - lastFrameTime).count() * 0.001;
+
+                lastFrameTime = now;
+                if(xState.isActive && yState.isActive)
+                {
+                    vsg::dvec3 lRight(1, 0, 0);
+                    vsg::dvec3 lForward(0, 0, -1);
+                    const double strafeSensitivity = 1.8; // m/s
+                    const double deadZone = 0.1;
+                    vsg::dvec3 d = (lRight * static_cast<double>(xState.currentState) ) + (lForward * static_cast<double>(yState.currentState) );
+                    if (vsg::length(d) > deadZone)
+                    {
+                        d *= strafeSensitivity * deltaT;
+                        vsg::dvec3 v(0, 0, 0);
+                        v = vsg::inverse(xrCameras.front()->viewMatrix->transform())*v;
+                        d = vsg::inverse(xrCameras.front()->viewMatrix->transform())*d-v;
+                        d.z = 0;
+                        originPosition += d;
+                        //originPosition.y = 0;
+                        updateOrigin = true;
+                    }
+                }
+                if(updateOrigin)
+                {
+                    headsetCompositionLayer->originPosition = originPosition;
+                    //userOrigin->setOriginInScene(originPosition, vsg::dquat(originRotation, { 0.0, 0.0, 1.0 }), vsg::dvec3(1.0, 1.0, 1.0));
+                }
+            }
+
+            // handle grab actions
+            vsg::dvec3 v(0, 0, 0), s, v2, s2;
+            vsg::dquat q, q2;
+            bool havePose = false;
+
+            // for picking in ui
+            vsg::dvec3 start, end, pickPos;
+
+            if(rightHandPose->getTransformValid())
+            {
+                havePose = true;
+                vsg::decompose(rightHandPose->getTransform(), v, q, s);
+                v += originPosition;
+                start = v;
+                end = start + q*vsg::dvec3(0.0, 0.0, -2.0);
+                for(auto &c: xrClients)
+                {
+                    c->rightHandPoseUpdate(utils::Vector(v.x, v.y, v.z),
+                                           utils::Quaternion(q.w, q.x, q.y, q.z));
+                }
+            }
+            if(leftHandPose->getTransformValid())
+            {
+                vsg::decompose(leftHandPose->getTransform(), v2, q2, s2);
+                v2 += originPosition;
+                for(auto &c: xrClients)
+                {
+                    c->leftHandPoseUpdate(utils::Vector(v2.x, v2.y, v2.z),
+                                          utils::Quaternion(q2.w, q2.x, q2.y, q2.z));
+                }
+            }
+
+            // add pick handling for pointer device
+            // we have some performance issues and don't know if the line intersector might be the reason
+            // so we test a simple workaround for our special use-case (imgui)
+            if(headPose->getTransformValid() && havePose)
+            {
+                // auto viewMatrix = vsg::inverse(headPose->getTransform());
+                // // transform pointer ray into view
+                // start = viewMatrix*(start-originPosition);
+                // end = viewMatrix*(end-originPosition);
+                // // project ray on z -1.0 plane (where we have the imgui)
+                // double zTarget = -1.0 - start.z;
+                // pickPos = end-start;
+                // double scale = zTarget/pickPos.z;
+                // pickPos *= scale;
+                // pickPos += start;
+                // // transform back into target object space
+                // pickPos.x += 1.92 * 0.5;
+                // pickPos.y += 1.08 * 0.5;
+                // for(auto &client: uvPointerClients)
+                // {
+                //     for(auto &ec: client.second)
+                //     {
+                //         ec->pointerEvent(pickPos.x, pickPos.y);
+                //     }
+                // }
+                for(auto &client: uvPointerClients)
+                {
+                    for(auto &ec: client.second)
+                    {
+                        ec->pointerRayEvent(utils::Vector(start.x, start.y, start.z),
+                                            utils::Vector(end.x, end.y, end.z));
+                    }
+                }
+            }
+
+            // vsg::ref_ptr<vsg::LineSegmentIntersector::Intersection> intersection;
+            // if(uvPointerTrackingActive && havePose && false)
+            // {
+            //     auto iter = windows.begin();
+            //     if(iter != windows.end())
+            //     {
+            //         auto window = iter->second;
+            //         auto intersector = vsg::LineSegmentIntersector::create(start, end);
+            //         window->contentGroup->accept(*intersector);
+            //         if(!intersector->intersections.empty())
+            //         {
+            //             //std::cout << "pick: " << std::endl;
+            //             // sort the intersections front to back
+            //             intersection = intersector->intersections[0];
+            //             for(auto &it: intersector->intersections)
+            //             {
+            //                 if(it->ratio < intersection->ratio)
+            //                 {
+            //                     intersection = it;
+            //                 }
+            //             }
+            //             handlePickEvent(intersection, false);
+            //         }
+            //     }
+            // }
+
+            if(grabAction->getStateValid())
+            {
+                auto grabState = grabAction->getStateBool();
+                if(grabState.isActive)
+                {
+                    bool value = static_cast<bool>(grabState.currentState);
+                    if(value != grabValue)
+                    {
+                        grabValue = value;
+                        if(value)
+                        {
+                            if(havePose)
+                            {
+                                bool handled = false;
+                                for(auto &client: uvPointerClients)
+                                {
+                                    for(auto &ec: client.second)
+                                    {
+                                        handled = ec->pointerRayClickEvent(utils::Vector(start.x, start.y, start.z),
+                                            utils::Vector(end.x, end.y, end.z));
+                                        //handled = ec->pointerClickEvent(pickPos.x, pickPos.y);
+                                    }
+                                }
+
+                                // first check if we have a pick event
+                                // otherwise perform grab operation
+                                if(!handled)
+                                    //if(intersection && !handlePickEvent(intersection))
+                                {
+                                    grabActive = true;
+                                    if(xrClients.size() > 0)
+                                    {
+                                        for(auto &c: xrClients)
+                                        {
+                                            c->grabStart(utils::Vector(v.x, v.y, v.z), utils::Quaternion(q.w, q.x, q.y, q.z));
+                                        }
+                                    } else if(manipulators.size() > 0) // search for first manipulator
+                                    {
+                                        auto &manipulator = manipulators.begin()->second;
+                                        manipulator->setStartPosition(utils::Vector(v.x, v.y, v.z));
+                                        manipulator->setStartRotation(utils::Quaternion(q.w, q.x, q.y, q.z));
+                                    }
+                                }
+                            }
+                        } else
+                        {
+                            // create release event
+                            grabActive = false;
+                            handleReleaseEvent();
+                        }
+                    } else if(grabActive)
+                    {
+                        if(xrClients.size() > 0)
+                        {
+                            for(auto &c: xrClients)
+                            {
+                                c->grabMove(utils::Vector(v.x, v.y, v.z), utils::Quaternion(q.w, q.x, q.y, q.z));
+                            }
+                        } else if(manipulators.size() > 0) // search for first manipulator
+                        {
+                            auto &manipulator = manipulators.begin()->second;
+                            manipulator->setGrabPosition(utils::Vector(v.x, v.y, v.z));
+                            manipulator->setGrabRotation(utils::Quaternion(q.w, q.x, q.y, q.z));
+                        }
+                    }
+                }
+            }
+
+            if(selectAction->getStateValid())
+            {
+                auto selectState = selectAction->getStateBool();
+                if(selectState.isActive)
+                {
+                    bool value = static_cast<bool>(selectState.currentState);
+                    if(value != selectActive)
+                    {
+                        selectActive = value;
+                        if(value)
+                        {
+                            for(auto &c: xrClients)
+                            {
+                                c->select(utils::Vector(v.x, v.y, v.z));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(toggleAction->getStateValid())
+            {
+                auto toggleState = toggleAction->getStateBool();
+                if(toggleState.isActive)
+                {
+                    bool value = static_cast<bool>(toggleState.currentState);
+                    if(value != toggleActive)
+                    {
+                        toggleActive = value;
+                        if(value)
+                        {
+                            for(auto &c: xrClients)
+                            {
+                                c->toggleMode(utils::Vector(v.x, v.y, v.z));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(cancelAction->getStateValid())
+            {
+                auto cancelState = cancelAction->getStateBool();
+                if(cancelState.isActive)
+                {
+                    bool value = static_cast<bool>(cancelState.currentState);
+                    if(value != cancelActive)
+                    {
+                        cancelActive = value;
+                        if(value)
+                        {
+                            for(auto &c: xrClients)
+                            {
+                                c->cancel();
+                            }
+                        }
+                    }
+                }
+            }
+
+            {
+                // todo:
+                // // Match the desktop camera to the HMD view - mirroring the projectionMatrix exactly
+                // // is non-optimal here, but works as a simple desktop mirror setup.
+
+                // there is a difference of the projection system between vsgVr and vsg
+                // so we have to convert the pose
+                // copied directly from vsgvr:
+                if(headPose->getTransformValid())
+                {
+                    auto cameraMatrix = headPose->getTransform();
+                    vsg::dvec3 v, s;
+                    vsg::dquat q, q2;
+                    auto worldRotateMat = vsg::rotate(-vsg::PI / 2.0, 1.0, 0.0, 0.0);
+                    vsg::decompose(cameraMatrix, v, q, s);
+                    v = v+originPosition;
+                    q2 = q;
+                    gw->graphicsCamera->updateViewportQuat(v.x, v.y, v.z, q2.x, q2.y, q2.z, q2.w);
+                    //gw->graphicsCamera->camera->viewMatrix = xrCameras.front()->viewMatrix;
+                    //gw->graphicsCamera->camera->projectionMatrix = xrCameras.front()->projectionMatrix;
+                }
+            }
+#endif
+        }
+
+        void GraphicsManager::compileXRViewer()
+        {
+#ifdef XRTEST
+            if(!xr) return;
+            for(auto &cl: vrViewer->compositionLayers)
+            {
+                cl->compile();
+            }
+#endif
+        }
+
+        void GraphicsManager::drawXR()
+        {
+#ifdef XRTEST
+            if(!xr) return;
+            // The PollEventsResult signifies that the session is running in some form.
+            // In this case a frame must be rendered by the application, even if it is empty,
+            // this is important to maintain sync between the application's render loop
+            // and OpenXR runtime.
+            if(vrViewer->advanceToNextFrame())
+            {
+                if(xrPollResult == vsgvr::Viewer::PollEventsResult::RunningDontRender)
+                {
+                    // XR Runtime requested that rendering is not performed (not visible to user)
+                    // While this happens frames must still be acquired and released
+                }
+                else
+                {
+                    // Render each of the composition layers to their swapchains
+                    vrViewer->recordAndSubmit();
+                }
+            }
+
+            // End the frame, and present composition layers to the OpenXR compositor
+            // Frames must be explicitly released, even if the previous advanceToNextFrame returned false
+            vrViewer->releaseFrame();
+#endif
+        }
+
         void GraphicsManager::draw()
         {
             static unsigned long framecount = 0;
@@ -679,7 +1129,7 @@ namespace mars
             ++framecount;
             ++framecount2;
 
-            auto now = vsg::clock::now();
+            now = vsg::clock::now();
             double td = std::chrono::duration<double, std::chrono::milliseconds::period>(now - time1).count();
             double td2 = std::chrono::duration<double, std::chrono::milliseconds::period>(now - time2).count();
             if(td > 100)
@@ -707,6 +1157,7 @@ namespace mars
                 framecount = 0;
             }
 
+            handleXREvents();
 
             // todo: remove draw handling via nsview
             for(auto& graphicsUpdateObject: graphicsUpdateObjects)
@@ -716,7 +1167,11 @@ namespace mars
 
             // todo: solve this for each camera
             auto iter = windows.begin();
-            if(iter != windows.end())
+#ifdef XRTEST
+            if(iter != windows.end() && !xr)
+#else
+                if(iter != windows.end())
+#endif
             {
                 auto window = iter->second;
                 if(uvPointerTrackingActive)
@@ -738,23 +1193,39 @@ namespace mars
                     }
 
                 }
-                //GuiHelper::worldTransformUniform->value().projInverse = window->perspective->inverse();
-                //GuiHelper::worldTransformUniform->value().viewInverse = window->lookAt->inverse();
-                //GuiHelper::worldTransformUniform->dirty();
             }
             // fprintf(stderr, ". ");
             // // pass any events into EventHandlers assigned to the Viewer
             if(dirty_)
             {
                 viewer->compile();
+                compileXRViewer();
                 dirty_ = false;
             }
             // could also try
-            viewer->render();
-            // viewer->handleEvents();
-            // viewer->update();
-            // viewer->recordAndSubmit();
-            // viewer->present();
+            //viewer->render();
+
+            //if (viewer->advanceToNextFrame(vsg::Viewer::UseTimeSinceStartPoint))
+
+            if (viewer->advanceToNextFrame())
+            {
+                viewer->handleEvents();
+                for(auto& graphicsUpdateObject: graphicsUpdateObjects)
+                {
+                    graphicsUpdateObject->preGraphicsDrawUpdate();
+                }
+                viewer->update();
+                viewer->recordAndSubmit();
+                viewer->present();
+            }
+
+            //viewer->handleEvents();
+            //viewer->update();
+            //viewer->recordAndSubmit();
+            //viewer->present();
+
+            drawXR();
+
             for(auto& graphicsUpdateObject: graphicsUpdateObjects)
             {
                 graphicsUpdateObject->postGraphicsUpdate();
@@ -793,7 +1264,7 @@ namespace mars
 
         void GraphicsManager::addGraphicsNode(void* node, int windowMask)
         {
-            ExternNode n{vsg::ref_ptr<vsg::Node>(static_cast<vsg::Node*>(node)), windowMask};
+            ExternNode n{*(static_cast<vsg::ref_ptr<vsg::Node>*>(node)), windowMask};
             for(auto &it: windows)
             {
                 int mask = (1 << (it.first-1));
@@ -808,14 +1279,14 @@ namespace mars
 
         void GraphicsManager::removeGraphicsNode(void* node)
         {
-            vsg::ref_ptr<vsg::Node> n(static_cast<vsg::Node*>(node));
+            vsg::ref_ptr<vsg::Node> n(*(static_cast<vsg::ref_ptr<vsg::Node>*>(node)));
             for(auto &it: windows)
             {
-                auto &contentGroup = it.second->contentGroup;
-                auto it2 = std::find(contentGroup->children.begin(), contentGroup->children.end(), n);
-                if(it2 != contentGroup->children.end())
+                auto &contentGroup_ = it.second->contentGroup;
+                auto it2 = std::find(contentGroup_->children.begin(), contentGroup_->children.end(), n);
+                if(it2 != contentGroup_->children.end())
                 {
-                    contentGroup->children.erase(it2);
+                    contentGroup_->children.erase(it2);
                     dirty_ = true;
                 }
             }
@@ -956,6 +1427,9 @@ namespace mars
                                                         std::numeric_limits<int>::max(), this).iValue;
             gridWindowMask = cfg->getOrCreateProperty("Graphics", "gridWindowMask",
                                                       std::numeric_limits<int>::max(), this).iValue;
+#ifdef XRTEST
+            xr = cfg->getOrCreateProperty("Graphics", "xr", xr, this).bValue;
+#endif
         }
 
         void GraphicsManager::getTextureSize(std::string materialName,
@@ -999,12 +1473,12 @@ namespace mars
                 auto it2 = it->second->captureImages.find(textureName);
                 if(it2 != it->second->captureImages.end())
                 {
-                    if(w != it2->second->extent.width)
+                    if((unsigned int)w != it2->second->extent.width)
                     {
                         LOG_ERROR("GraphicsManager::captureTextureData width %d doesn't match image width %d!", w, it2->second->extent.width);
                         return;
                     }
-                    if(h != it2->second->extent.height)
+                    if((unsigned int)h != it2->second->extent.height)
                     {
                         LOG_ERROR("GraphicsManager::captureTextureData height %d doesn't match image height %d!", h, it2->second->extent.height);
                         return;
@@ -1042,12 +1516,12 @@ namespace mars
                 auto it2 = it->second->images.find(textureName);
                 if(it2 != it->second->images.end())
                 {
-                    if(w != it2->second->extent.width)
+                    if((unsigned int)w != it2->second->extent.width)
                     {
                         LOG_ERROR("GraphicsManager::getTextureData width %d doesn't match image width %d!", w, it2->second->extent.width);
                         return;
                     }
-                    if(h != it2->second->extent.height)
+                    if((unsigned int)h != it2->second->extent.height)
                     {
                         LOG_ERROR("GraphicsManager::getTextureData height %d doesn't match image height %d!", h, it2->second->extent.height);
                         return;
@@ -1084,12 +1558,12 @@ namespace mars
                 auto it2 = it->second->images.find(textureName);
                 if(it2 != it->second->images.end())
                 {
-                    if(w != it2->second->extent.width)
+                    if((unsigned int)w != it2->second->extent.width)
                     {
                         LOG_ERROR("GraphicsManager::setTextureData width %d doesn't match image width %d!", w, it2->second->extent.width);
                         return;
                     }
-                    if(h != it2->second->extent.height)
+                    if((unsigned int)h != it2->second->extent.height)
                     {
                         LOG_ERROR("GraphicsManager::setTextureData height %d doesn't match image height %d!", h, it2->second->extent.height);
                         return;
@@ -1237,6 +1711,9 @@ namespace mars
 
         void* GraphicsManager::getEngineViewer()
         {
+// #ifdef XRTEST
+//             if(xr) return (void*)&(vrViewer);
+// #endif
             return (void*)&(viewer);
         }
 
@@ -1319,6 +1796,20 @@ namespace mars
                 }
             }
             return handled;
+        }
+
+        void GraphicsManager::addXRClient(XRClient *c)
+        {
+            xrClients.push_back(c);
+        }
+
+        void GraphicsManager::removeXRClient(XRClient *c)
+        {
+            auto it = find(std::begin(xrClients), std::end(xrClients), c);
+            if(it!=std::end(xrClients))
+            {
+                xrClients.erase(it);
+            }
         }
 
     } // end of namespace vsg_graphics

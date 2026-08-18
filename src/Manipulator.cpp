@@ -1,5 +1,6 @@
 #include "Manipulator.hpp"
 #include <mars_utils/misc.h>
+#include <mars_utils/mathUtils.h>
 #include "gui_helper_functions.hpp"
 #include <mars_interfaces/Logging.hpp>
 
@@ -500,5 +501,41 @@ namespace mars
                 return;
             }
         }
+
+        void Manipulator::setStartPosition(const utils::Vector &v)
+        {
+            startPosition = v;
+        }
+
+        void Manipulator::setGrabPosition(const utils::Vector &v)
+        {
+            utils::Vector diff = v-startPosition;
+            startPosition = v;
+            eventClient->moveX(diff.x()*100);
+            eventClient->moveY(diff.y()*100);
+            eventClient->moveZ(diff.z()*100);            
+        }
+
+        void Manipulator::setStartRotation(const utils::Quaternion &q)
+        {
+            startRotation = q;
+            startRotation.x() = -startRotation.x();
+            startRotation.y() = -startRotation.y();
+            startRotation.z() = -startRotation.z();
+        }
+
+        void Manipulator::setGrabRotation(const utils::Quaternion &q)
+        {
+            utils::Quaternion diff = q*startRotation;
+            startRotation = q;
+            startRotation.x() = -startRotation.x();
+            startRotation.y() = -startRotation.y();
+            startRotation.z() = -startRotation.z();
+            utils::sRotation r = utils::quaternionTosRotation(diff);
+            eventClient->rotX(utils::degToRad(r.alpha)*100);
+            eventClient->rotY(utils::degToRad(r.beta)*100);
+            eventClient->rotZ(utils::degToRad(r.gamma)*100);            
+        }
+
     }
 }

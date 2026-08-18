@@ -231,8 +231,10 @@ void pixellight_frag(vec4 base, vec3 n, float shadow, out vec4 outcol) {
   vec4 baseColor;
   float ambientOcclusion = 1.0;
   vec3 f0 = vec3(0.04);
+  //mat4 view = inverse(wt.viewInverse);
   // todo: handle vertexColor?
   baseColor = pbr.baseColorFactor;
+  //base = pbr.diffuseFactor;
 
   perceptualRoughness = pbr.roughnessFactor;
   metallic = pbr.metallicFactor;
@@ -261,7 +263,9 @@ void pixellight_frag(vec4 base, vec3 n, float shadow, out vec4 outcol) {
           vec4 lightColor = lightData.values[lightDataIndex++];
           color += (baseColor.rgb * lightColor.rgb) * (lightColor.a * ambientOcclusion);
       }
-  }  
+  }
+  // some default ambient light
+  //color += (baseColor.rgb * vec3(0.3, 0.3, 0.3));
   if(numDirectionalLights > 0)
   {
       for(int i=0; i<numDirectionalLights; ++i)
@@ -289,6 +293,18 @@ void pixellight_frag(vec4 base, vec3 n, float shadow, out vec4 outcol) {
 
       }
   }
+  /* { // some default diffuse light */
+  /*     vec4 lightColor = vec4(0.8, 0.8, 0.8, 1.0); */
+  /*     vec3 direction = (view*vec4(5.0, 0.0, 0.0, 0.0)).xyz; */
+  /*     float brightness = 1.0; */
+  /*     // for shadowMapCount ... */
+  /*     vec3 l = direction;         // Vector from surface point to light */
+  /*     vec3 h = normalize(l+eye);    // Half vector between both l and v */
+  /*     float scale = brightness; */
+  /*     //n = vec3(0.0, 0.0, 1.0); */
+  /*     float nDotL = max(dot( normal, normalize(  direction ) ), 0.0); */
+  /*     color.rgb += base.rgb*nDotL; */
+  /* } */
 
   // for(int i=0; i<numLights; ++i) {
   //   if(lightIsSet[i]==1) {

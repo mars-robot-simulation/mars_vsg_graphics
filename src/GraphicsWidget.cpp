@@ -1,4 +1,5 @@
 #include <QWidget>
+#include <QVBoxLayout>
 
 #include "GraphicsWidget.hpp"
 #include "GraphicsCamera.hpp"
@@ -118,169 +119,19 @@ namespace mars
             //cout << "moveEvent: " << moveEvent.x << " " << moveEvent.y << endl;
         }
 
-        vsg::ref_ptr<vsg::RenderGraph> GraphicsWidget::createOffscreenRendergraph(vsg::Context& context,
-                                                                                  const VkExtent2D& extent)
-        {
-            auto device = context.device;
-
-            VkExtent3D attachmentExtent{extent.width, extent.height, 1};
-            // Attachments
-            // create image for color attachment
-            colorImage = vsg::Image::create();
-            colorImage->imageType = VK_IMAGE_TYPE_2D;
-            colorImage->format = VK_FORMAT_R8G8B8A8_SRGB;
-            colorImage->extent = attachmentExtent;
-            colorImage->mipLevels = 1;
-            colorImage->arrayLayers = 1;
-            colorImage->samples = VK_SAMPLE_COUNT_1_BIT;
-            colorImage->tiling = VK_IMAGE_TILING_OPTIMAL;
-            colorImage->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-            colorImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            colorImage->flags = 0;
-            colorImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            auto colorImageView = createImageView(context, colorImage, VK_IMAGE_ASPECT_COLOR_BIT);
-
-            // // Sampler for accessing attachment as a texture
-            // auto colorSampler = vsg::Sampler::create();
-            // colorSampler->flags = 0;
-            // colorSampler->magFilter = VK_FILTER_LINEAR;
-            // colorSampler->minFilter = VK_FILTER_LINEAR;
-            // colorSampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            // colorSampler->addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            // colorSampler->addressModeV = colorSampler->addressModeU;
-            // colorSampler->addressModeW = colorSampler->addressModeU;
-            // colorSampler->mipLodBias = 0.0f;
-            // colorSampler->maxAnisotropy = 1.0f;
-            // colorSampler->minLod = 0.0f;
-            // colorSampler->maxLod = 1.0f;
-            // colorSampler->borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-            colorImageInfo = vsg::ImageInfo::create();
-            colorImageInfo->imageView = colorImageView;
-            colorImageInfo->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            colorImageInfo->sampler = nullptr;
-
-            // create depth buffer
-            VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
-            depthImage = vsg::Image::create();
-            depthImage->imageType = VK_IMAGE_TYPE_2D;
-            depthImage->extent = attachmentExtent;
-            depthImage->mipLevels = 1;
-            depthImage->arrayLayers = 1;
-            depthImage->samples = VK_SAMPLE_COUNT_1_BIT;
-            depthImage->format = depthFormat;
-            depthImage->tiling = VK_IMAGE_TILING_OPTIMAL;
-            depthImage->usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-            depthImage->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthImage->flags = 0;
-            depthImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-            // // Sampler for accessing attachment as a texture
-            // auto depthSampler = vsg::Sampler::create();
-            // depthSampler->flags = 0;
-            // depthSampler->magFilter = VK_FILTER_LINEAR;
-            // depthSampler->minFilter = VK_FILTER_LINEAR;
-            // depthSampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            // depthSampler->addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            // depthSampler->addressModeV = depthSampler->addressModeU;
-            // depthSampler->addressModeW = depthSampler->addressModeU;
-            // depthSampler->mipLodBias = 0.0f;
-            // depthSampler->maxAnisotropy = 1.0f;
-            // depthSampler->minLod = 0.0f;
-            // depthSampler->maxLod = 1.0f;
-            // depthSampler->borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-            // XXX Does layout matter?
-            depthImageInfo = vsg::ImageInfo::create();
-            depthImageInfo->sampler = nullptr;//depthSampler;
-            depthImageInfo->imageView = vsg::createImageView(context, depthImage, VK_IMAGE_ASPECT_DEPTH_BIT);
-            depthImageInfo->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-            // attachment descriptions
-            vsg::RenderPass::Attachments attachments(2);
-            // Color attachment
-            attachments[0].format = VK_FORMAT_R8G8B8A8_SRGB;
-            attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-            attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            // Depth attachment
-            attachments[1].format = depthFormat;
-            attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-            attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-            vsg::AttachmentReference colorReference = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-            vsg::AttachmentReference depthReference = {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
-            vsg::RenderPass::Subpasses subpassDescription(1);
-            subpassDescription[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpassDescription[0].colorAttachments.emplace_back(colorReference);
-            subpassDescription[0].depthStencilAttachments.emplace_back(depthReference);
-
-            vsg::RenderPass::Dependencies dependencies(2);
-
-            // XXX This dependency is copied from the offscreenrender.cpp
-            // example. I don't completely understand it, but I think its
-            // purpose is to create a barrier if some earlier render pass was
-            // using this framebuffer's attachment as a texture.
-            dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependencies[0].dstSubpass = 0;
-            dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-            // This is the heart of what makes Vulkan offscreen rendering
-            // work: render passes that follow are blocked from using this
-            // passes' color attachment in their fragment shaders until all
-            // this pass' color writes are finished.
-            dependencies[1].srcSubpass = 0;
-            dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-            dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-            auto renderPass = vsg::RenderPass::create(device, attachments, subpassDescription, dependencies);
-
-            // Framebuffer
-            auto fbuf = vsg::Framebuffer::create(renderPass, vsg::ImageViews{colorImageInfo->imageView, depthImageInfo->imageView}, extent.width, extent.height, 1);
-
-            auto rendergraph = vsg::RenderGraph::create();
-            rendergraph->renderArea.offset = VkOffset2D{0, 0};
-            rendergraph->renderArea.extent = extent;
-            rendergraph->framebuffer = fbuf;
-
-            rendergraph->clearValues.resize(2);
-            rendergraph->clearValues[0].color = vsg::sRGB_to_linear(1.0f, 0.0f, 0.0f, 1.0f);
-            rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
-
-            return rendergraph;
-        }
-
         GraphicsWidget::GraphicsWidget(void* parent,
-                                       vsg::ref_ptr<vsg::Group> scene,
+                                       vsg::ref_ptr<vsg::Group> scene_,
                                        unsigned long id,
-                                       bool isRTTWidget,
-                                       GraphicsManager* gm):
-            gm{gm}, hasFocus{false}, graphicsCamera(nullptr)
+                                       bool isRTTWidget_,
+                                       GraphicsManager* gm_):
+            graphicsCamera(nullptr), gm{gm_}, hasFocus{false}
         {
             // todo: check parent handling
             (void)parent;
 
             widgetID = id;
 
-            this->isRTTWidget = isRTTWidget;
+            isRTTWidget = isRTTWidget_;
             isStereoDisplay = isFullscreen = false;
             isMouseMoving = isMouseButtonDown = false;
             isHUDShown = true;
@@ -293,7 +144,7 @@ namespace mars
             mouseX = mouseY = 0;
             //pickmode = DISABLED;
 
-            this->scene = scene;
+            scene = scene_;
             //view = new osgViewer::View;
             name = "3D View";
             clearColor = {0.2, 0.2, 0.2, 1.0};
@@ -324,6 +175,7 @@ namespace mars
                                         bool vsync)
         {
             (void) data;
+            (void) vsync;
 
             if(!gm)
             {
@@ -351,6 +203,31 @@ namespace mars
                 traits->height = widgetHeight;
             }
             auto clearColor_ = vsg::vec4(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+
+#ifdef XRTEST
+            vsg::ref_ptr<vsgvr::Traits> xrTraits;
+            vsgvr::VulkanRequirements xrVulkanReqs;
+            if(gm->xr)
+            {
+                if(!isRTTWidget)
+                {
+                    xrTraits = vsgvr::Traits::create();
+                    xrTraits->applicationName = "VSGVR Generic OpenXR Example";
+                    xrTraits->setApplicationVersion(0, 0, 0);
+                    xrTraits->setEngineVersion(1, 1, 0);
+                    //xrTraits->xrExtensions.push_back("XR_BD_controller_interaction");
+                    gm->xrInstance = vsgvr::Instance::create(XrFormFactor::XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, xrTraits);
+                    xrTraits->viewConfigurationType = selectViewConfigurationType(gm->xrInstance);
+                    xrTraits->environmentBlendMode = selectEnvironmentBlendMode(gm->xrInstance, xrTraits->viewConfigurationType);
+
+                    // Retrieve the vulkan requirements - The OpenXR runtime will require certain vulkan versions,
+                    // along with a specific physical device, and instance/device extensions
+                    xrVulkanReqs = vsgvr::GraphicsBindingVulkan::getVulkanRequirements(gm->xrInstance);
+                    configureXrVulkanRequirements(traits, xrVulkanReqs);
+                }
+            }
+#endif
+            
             //auto clearColor = vsg::vec4(0.2f, 0.2f, 0.7f, 1.0f);
             // todo: evaluate msaa
             VkSampleCountFlagBits samples = false ? VK_SAMPLE_COUNT_8_BIT : VK_SAMPLE_COUNT_1_BIT;
@@ -425,15 +302,92 @@ namespace mars
                     LOG_ERROR("GraphicsWidget::initialize Could not create window.");
                     return;
                 }
+
+                contentGroup = vsg::Group::create();
+                contentGroup->addChild(gm->rootNode);
+
+#ifdef XRTEST
+                if(gm->xr)
+                {
+                    auto vkInstance = window->windowAdapter->getOrCreateInstance();
+                    VkPhysicalDevice xrRequiredDevice = vsgvr::GraphicsBindingVulkan::getVulkanDeviceRequirements(gm->xrInstance, vkInstance, xrVulkanReqs);
+                    vsg::ref_ptr<vsg::PhysicalDevice> physicalDevice;
+                    for (auto& dev : vkInstance->getPhysicalDevices())
+                    {
+                        if (dev->vk() == xrRequiredDevice)
+                        {
+                            physicalDevice = dev;
+                        }
+                    }
+                    if (!physicalDevice)
+                    {
+                        LOG_ERROR("Unable to select physical device, as required by OpenXR");
+                        return;// EXIT_FAILURE;
+                    }
+                    window->windowAdapter->setPhysicalDevice(physicalDevice);
+                    // Bind OpenXR to the desktop window's vulkan instance
+                    window->windowAdapter->getOrCreateSurface();
+                    auto vkDevice = window->windowAdapter->getOrCreateDevice();
+                    auto graphicsBinding = vsgvr::GraphicsBindingVulkan::create(vkInstance, physicalDevice, vkDevice, physicalDevice->getQueueFamily(VK_QUEUE_GRAPHICS_BIT), 0);
+                    traits->device = vkDevice;
+                    
+                    // Configure the OpenXR session, managed by a vsgvr Viewer
+                    // As part of this, perform further trait validation, and selection of appropriate rendering parameters
+                    gm->vrViewer = vsgvr::Viewer::create(gm->xrInstance, graphicsBinding);
+                
+                    auto vrSession = gm->vrViewer->getSession();
+                    xrTraits->swapchainFormat = selectSwapchainFormat(vrSession);
+                    xrTraits->swapchainSampleCount = selectSwapchainSampleCount(vrSession, traits->samples);
+                    // Lastly define the world space used for the application, from one of the OpenXR reference spaces
+                    // This is required both for rendering, and as a reference to locate tracked devices within.
+                    auto referenceSpaceType = selectReferenceSpaceType(vrSession);
+                    // Configure world space to be the origin of the selected reference space type
+                    // Our reference space may be rotated or translated if required
+                    auto referenceSpace = vsgvr::ReferenceSpace::create(vrSession, referenceSpaceType);
+                    gm->vrViewer->referenceSpace = referenceSpace;
+
+                    // Configure rendering of the vsg scene into a composition layer
+                    // Multiple composition layers may be provided, but at minimum a single CompositionLayerProjection is needed
+                    // to display the scene within the headset / OpenXR displays.
+                    //
+                    // CompositionLayerProjection is somewhat special in that it doesn't represent an object within the world,
+                    // rather it is always bound to the headset, and cameras / views within the layer will be auto-assigned.
+                    //
+                    // Other object-based layers such as CompositionLayerQuad appear within the world as textured objects,
+                    // and may be moved / rotated by defining another ReferenceSpace, based upon our defined world space
+                    gm->headsetCompositionLayer = vsgvr::CompositionLayerProjection::create(referenceSpace);
+                    auto xrGroup = vsg::Group::create();
+                    gm->userOrigin = vsgvr::UserOrigin::create();
+                    xrGroup->addChild(gm->userOrigin);
+                    gm->userOrigin->addChild(contentGroup);
+                    auto xrCommandGraphs = gm->headsetCompositionLayer->createCommandGraphsForView(gm->xrInstance, vrSession, xrGroup, gm->xrCameras, false);
+                    auto xrRenderGraph = xrCommandGraphs[0]->children[0]->cast<vsg::RenderGraph>();
+                    xrRenderGraph->setClearValues(vsg::sRGB_to_linear(clearColor_), VkClearDepthStencilValue{0.0f, 0});
+                    auto xrView = xrRenderGraph->children[0]->cast<vsg::View>();
+                    xrView->viewDependentState = ViewDependentState::create(xrView);
+
+                    gm->headsetCompositionLayer->assignRecordAndSubmitTask(xrCommandGraphs);
+                    gm->headsetCompositionLayer->compile();
+                    gm->vrViewer->compositionLayers.push_back(gm->headsetCompositionLayer);
+                }
+                else if(!traits->device)
+                {
+                    traits->device = window->windowAdapter->getOrCreateDevice();
+                }
+#else
                 // if this is the first window to be created, use its device for future window creation.
-                if (!traits->device) traits->device = window->windowAdapter->getOrCreateDevice();
+                if(!traits->device)
+                {
+                    traits->device = window->windowAdapter->getOrCreateDevice();
+                }
+#endif
                 GuiHelper::device = traits->device;
 
-                uint32_t width = window->traits->width;
-                uint32_t height = window->traits->height;
-                fprintf(stderr, "-------- with: %u\theight: %u\n", width, height);
+                uint32_t width_ = window->traits->width;
+                uint32_t height_ = window->traits->height;
+                fprintf(stderr, "-------- with: %u\theight: %u\n", width_, height_);
 
-                graphicsCamera = new GraphicsCamera(width, height);
+                graphicsCamera = new GraphicsCamera(width_, height_);
 
                 eventHandler = EventHandler::create();
                 eventHandler->gw = this;
@@ -446,8 +400,6 @@ namespace mars
                 auto view = vsg::View::create(graphicsCamera->camera);
                 // try to override view dependent state implementation
                 view->viewDependentState = ViewDependentState::create(view);
-                contentGroup = vsg::Group::create();
-                contentGroup->addChild(gm->rootNode);
                 view->addChild(contentGroup);
 
                 // set up the render graph
@@ -462,13 +414,18 @@ namespace mars
                 // todo: second window replaces first one at the moment
                 gm->viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
 
-#ifdef WIN32
+#ifdef WIN32d
+                container = new QWidget();
+                container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
+
                 auto container2 = QWidget::createWindowContainer(window, nullptr);
                 container2->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
-                container2->setFocusPolicy(Qt::StrongFocus);
-                container = new QWidget();
-                container2->setParent(container);
-                container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
+                //container2->setFocusPolicy(Qt::StrongFocus);
+                auto layout = new QVBoxLayout();
+                layout->addWidget(container2);
+                container->setLayout(layout);
+                //container2->setParent(container);
+                
 #else
                 container = QWidget::createWindowContainer(window, nullptr);
                 container->setGeometry(window->traits->x, window->traits->y, window->traits->width, window->traits->height);
@@ -476,10 +433,10 @@ namespace mars
 #endif
                 // for none rtt widgets we create an overlay view
                 overlayGroup = vsg::Group::create();
-                VkExtent2D targetExtent{(unsigned int)width, (unsigned int)height};
+                VkExtent2D targetExtent{(unsigned int)width_, (unsigned int)height_};
                 double radius = 1.0;
                 auto lookAt = vsg::LookAt::create(vsg::dvec3(radius * 2.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 0.0), vsg::dvec3(0.0, 0.0, 1.0));
-                double ratio = static_cast<double>(width) / static_cast<double>(height);
+                double ratio = static_cast<double>(width_) / static_cast<double>(height_);
                 auto perspective = vsg::Perspective::create(30.0, ratio, 0.001 * radius, radius * 100.5);
                 auto ortho = vsg::Orthographic::create(-0.5*ratio, 0.5*ratio,
                                                        -0.5, 0.5,
@@ -562,12 +519,12 @@ namespace mars
         {
             if(isRTTWidget)
             {
-                if(width != captureImage->extent.width)
+                if((unsigned int)width != captureImage->extent.width)
                 {
                     LOG_ERROR("GraphcisWidget::getImageData width doesn't fit to image of framebuffer");
                     return;
                 }
-                if(height != captureImage->extent.height)
+                if((unsigned int)height != captureImage->extent.height)
                 {
                     LOG_ERROR("GraphcisWidget::getImageData heigt doesn't fit to image of framebuffer");
                     return;
@@ -605,19 +562,19 @@ namespace mars
         {
             if(isRTTWidget)
             {
-                if(width != captureDepthImage->extent.width)
+                if((unsigned int)width != captureDepthImage->extent.width)
                 {
                     LOG_ERROR("GraphcisWidget::getRTTDepthData width doesn't fit to image of framebuffer");
                     return;
                 }
-                if(height != captureDepthImage->extent.height)
+                if((unsigned int)height != captureDepthImage->extent.height)
                 {
                     LOG_ERROR("GraphcisWidget::getRTTDepthData heigt doesn't fit to image of framebuffer");
                     return;
                 }
-                double fovy, aspectRatio, Zn, Zf;
-                fovy = graphicsCamera->perspective->fieldOfViewY;
-                aspectRatio = graphicsCamera->perspective->aspectRatio;
+                double Zn, Zf; //fovy, aspectRatio
+                //fovy = graphicsCamera->perspective->fieldOfViewY;
+                //aspectRatio = graphicsCamera->perspective->aspectRatio;
                 Zn  = graphicsCamera->perspective->nearDistance;
                 Zf  = graphicsCamera->perspective->farDistance;
                 auto imageData = vsg_graphics::getImageData(gm->viewer, captureDepthImage);
@@ -635,7 +592,7 @@ namespace mars
                         // but here we figured out that the depht buffer seems to be inverted.
                         // Todo: we have to verify that the calculation gives the correct distances
                         const double dv = 1.0-di;
-                        const double di2 = (float)(Zn*Zf/(Zf-dv*(Zf-Zn)));
+                        //const double di2 = (float)(Zn*Zf/(Zf-dv*(Zf-Zn)));
                         //if(di > 0.0001) fprintf(stderr, "/%f", di2);
                         // 1.0 is the max depth in the depth buffer, and
                         // is represented as a nan in the distance image
@@ -725,7 +682,7 @@ namespace mars
                 }
             }
             //LOG_ERROR("found intersection at %g %g %g", intersection->worldIntersection.x, intersection->worldIntersection.y, intersection->worldIntersection.z);
-            const vsg::MatrixTransform* transform;
+            //const vsg::MatrixTransform* transform;
 
             pickNodePath = intersection->nodePath;
             // for (auto node : intersection->nodePath)

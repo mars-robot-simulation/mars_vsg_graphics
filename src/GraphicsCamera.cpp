@@ -86,9 +86,16 @@ namespace mars
             *tx = lookAt->eye.x;
             *ty = lookAt->eye.y;
             *tz = lookAt->eye.z;
+
+/*
             vsg::dquat q1(vsg::dvec3(0.0, 1.0, 0.0), lookAt->up);
             vsg::dquat q2(vsg::dvec3(0.0, 0.0, -1.0), -q1*(lookAt->center-lookAt->eye));
             vsg::dquat q = q2*q1;
+            */
+            vsg::dmat4 view = lookAt->transform();
+            vsg::dvec3 p, s;
+            vsg::dquat q;
+            vsg::decompose(vsg::inverse(view), p, q, s);
             *rx = q.x;
             *ry = q.y;
             *rz = q.z;
@@ -162,14 +169,14 @@ namespace mars
         {
             LOG_ERROR("GraphicsCamera::mouseDrag not yet implemented!");
         }
-  
+
         //keyboard control functions
         /**sets the camera motion state */
         void GraphicsCamera::move(bool isMoving, Direction dir)
         {
             LOG_ERROR("GraphicsCamera::move not yet implemented!");
         }
-  
+
         /**moves camera up and donwn in iso mode*/
         void GraphicsCamera::zoom(float speed, int x, int y, unsigned int modkey)
         {
@@ -180,7 +187,7 @@ namespace mars
         {
             LOG_ERROR("GraphicsCamera::scrollX not yet implemented!");
         }
-  
+
 
         //protected slots:
         /**\brief set camera type by context menu */

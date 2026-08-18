@@ -68,6 +68,7 @@ namespace mars
                 {
                     tm.name = "diffuseMap";
                     tm.binding = binding++;
+                    LOG_ERROR("MARSStateGroup: Set capture image: %s", bgCaptureImageName.c_str());
 
                     auto imageView = vsg::ImageView::create(GuiHelper::fbCaptureImages[bgCaptureImageName]);
                     auto sampler = vsg::Sampler::create();
@@ -251,6 +252,14 @@ namespace mars
                 {
                     descriptorBindings.push_back({tm.binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr});
                 }
+                for(auto &u : vs.uniforms)
+                {
+                    if(u.second.name == tm.name)
+                    {
+                        u.second.set = 0;
+                        u.second.binding = tm.binding;
+                    }
+                }
                 for(auto &u : fs.uniforms)
                 {
                     if(u.second.name == tm.name)
@@ -319,7 +328,14 @@ namespace mars
             auto depthState = vsg::DepthStencilState::create();
             depthState->depthTestEnable = VK_TRUE;
             depthState->depthWriteEnable = VK_TRUE;
-            depthState->depthCompareOp = VK_COMPARE_OP_GREATER;
+            if(materialSpec.hasKey("writeDepth"))
+            {
+                if((bool)materialSpec["writeDepth"])
+                    depthState->depthWriteEnable = VK_TRUE;
+                else
+                    depthState->depthWriteEnable = VK_FALSE;
+            }
+            depthState->depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
             VkPipelineColorBlendAttachmentState colorBlendAttachment{};
             colorBlendAttachment.blendEnable = VK_FALSE;
@@ -340,7 +356,15 @@ namespace mars
                 colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
                 //colorBlendState->attachments.push_back(attachment);
             }
-            auto colorBlendState = vsg::ColorBlendState::create(vsg::ColorBlendState::ColorBlendAttachments{colorBlendAttachment});
+            vsg::ref_ptr<vsg::ColorBlendState> colorBlendState;
+            if(colorBlendAttachment.blendEnable)
+            {
+                colorBlendState = vsg::ColorBlendState::create(vsg::ColorBlendState::ColorBlendAttachments{colorBlendAttachment});
+            }
+            else
+            {
+                colorBlendState = vsg::ColorBlendState::create();
+            }
 
             vsg::GraphicsPipelineStates pipelineStates{
                 vsg::VertexInputState::create(vertexBindingsDescriptions, vertexAttributeDescriptions),
